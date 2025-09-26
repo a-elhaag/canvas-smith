@@ -1,8 +1,3 @@
-"""
-Canvas Smith Backend API
-A simple FastAPI backend for the Canvas Smith application.
-"""
-
 import os
 from datetime import datetime
 
