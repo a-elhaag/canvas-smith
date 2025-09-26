@@ -200,30 +200,14 @@ dist
 .cache/
 public
 
-# Vuepress build output
-.vuepress/dist
+# Vue / Vite build output
+frontend/dist/
+frontend/dist-ssr/
+frontend/coverage/
 
-# Serverless directories
-.serverless/
-
-# FuseBox cache
-.fusebox/
-
-# DynamoDB Local files
-.dynamodb/
-
-# TernJS port file
-.tern-port
-
-# Stores VSCode versions used for testing VSCode extensions
-.vscode-test
-
-# yarn v2
-.yarn/cache
-.yarn/unplugged
-.yarn/build-state.yml
-.yarn/install-state.gz
-.pnp.*
+# Local dev assets
+backend/static/*
+!backend/static/.gitkeep
 
 # IDEs and editors
 .idea/
@@ -241,8 +225,8 @@ public
 ehthumbs.db
 Thumbs.db
 
-# Docker
-.dockerignore
+# Docker build cache / artifacts
+*.dockerfile.swp
 
 # Logs
 logs
@@ -258,7 +242,7 @@ tmp/
 temp/
 .tmp/
 
-# Build artifacts
+# Build artifacts (general)
 build/
 dist/
 *.tgz
