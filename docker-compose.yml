@@ -1,24 +1,24 @@
 services:
   app:
-    # Single container build: builds frontend then packages backend
-    build:
-      context: .
-      dockerfile: Dockerfile
+    build: .
+    container_name: canvas-smith
     ports:
       - "8000:8000"
     environment:
       PORT: 8000
       ENVIRONMENT: development
       SERVE_FRONTEND: "true"
-    # No code mounts here so that the built static assets copied in the image remain available.
+      STATIC_DIR: static
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "python", "-c", "import requests,sys;\nimport os;\nurl='http://localhost:8000/health';\nimport urllib.request, json;\nurllib.request.urlopen(url, timeout=5);print('OK')"]
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import requests; requests.get('http://localhost:8000/health', timeout=10)",
+        ]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 10s
-
-networks:
-  default:
-    name: canvas-smith-network

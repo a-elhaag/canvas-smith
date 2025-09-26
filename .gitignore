@@ -6,7 +6,22 @@ __pycache__/
 .Python
 build/
 develop-eggs/
+# Frontend production build (Vite) - generated during Docker build; uncomment to ignore if you build locally
 dist/
+frontend/dist/
+
+# Do not commit built frontend copied into backend/static (left empty except .gitkeep)
+backend/static/*
+!backend/static/.gitkeep
+
+# Local override envs for deployment and Azure
+.env.azure
+
+# Docker compose override files
+docker-compose.override.yml
+
+# Mac metadata
+.AppleDouble
 downloads/
 eggs/
 .eggs/
@@ -200,14 +215,30 @@ dist
 .cache/
 public
 
-# Vue / Vite build output
-frontend/dist/
-frontend/dist-ssr/
-frontend/coverage/
+# Vuepress build output
+.vuepress/dist
 
-# Local dev assets
-backend/static/*
-!backend/static/.gitkeep
+# Serverless directories
+.serverless/
+
+# FuseBox cache
+.fusebox/
+
+# DynamoDB Local files
+.dynamodb/
+
+# TernJS port file
+.tern-port
+
+# Stores VSCode versions used for testing VSCode extensions
+.vscode-test
+
+# yarn v2
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+.pnp.*
 
 # IDEs and editors
 .idea/
@@ -225,8 +256,8 @@ backend/static/*
 ehthumbs.db
 Thumbs.db
 
-# Docker build cache / artifacts
-*.dockerfile.swp
+# Docker
+.dockerignore
 
 # Logs
 logs
@@ -242,7 +273,7 @@ tmp/
 temp/
 .tmp/
 
-# Build artifacts (general)
+# Build artifacts
 build/
 dist/
 *.tgz

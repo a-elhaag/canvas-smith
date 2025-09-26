@@ -1,2 +1,0 @@
-# Placeholder to keep static directory in git.
-# The build process will place compiled frontend assets here inside the Docker image.
