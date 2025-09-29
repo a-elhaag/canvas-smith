@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime
 from typing import Optional, Dict, Any, List
 from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Depends
@@ -6,6 +7,9 @@ from pydantic import BaseModel, Field
 
 from ...services.ai_service import ai_service
 from ...utils.image_processing import validate_image, process_image_for_ai
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 # Create router
 router = APIRouter(prefix="/api/ai", tags=["AI Services"])
@@ -84,12 +88,20 @@ async def generate_code_from_sketch(
             additional_instructions=additional_instructions
         )
         
+        # Debug: Log the AI service result
+        logger.info(f"AI service result keys: {list(result.keys())}")
+        logger.info(f"AI service code length: {len(result.get('code', '')) if result.get('code') else 'None/0'}")
+        logger.info(f"AI service code preview: {result.get('code', '')[:100] if result.get('code') else 'EMPTY'}")
+        
+        generated_code = result.get("code", "")
+        logger.info(f"Final generated_code length: {len(generated_code) if generated_code else 'None/0'}")
+        
         # Calculate processing time
         processing_time = (datetime.now() - start_time).total_seconds() * 1000
         
         return CodeGenerationResponse(
             success=True,
-            generated_code=result.get("code", ""),
+            generated_code=generated_code,
             framework=framework,
             metadata={
                 "image_size_bytes": len(processed_data),

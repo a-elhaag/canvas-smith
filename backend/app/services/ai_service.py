@@ -182,8 +182,26 @@ Please analyze the sketch and create complete, functional code that represents t
             endpoint = self._get_chat_endpoint()
             response = await self._make_ai_request(endpoint, payload)
             
+            # Debug: Log the full response structure
+            logger.info(f"Raw Azure OpenAI response keys: {list(response.keys())}")
+            logger.info(f"Response choices count: {len(response.get('choices', []))}")
+            
             # Extract the generated code
-            generated_code = response.get("choices", [{}])[0].get("message", {}).get("content", "")
+            choices = response.get("choices", [])
+            if choices:
+                message = choices[0].get("message", {})
+                logger.info(f"Message keys: {list(message.keys())}")
+                generated_code = message.get("content", "")
+                logger.info(f"Generated code length: {len(generated_code) if generated_code else 'None/0'}")
+                logger.info(f"Generated code preview: {generated_code[:100] if generated_code else 'EMPTY'}")
+            else:
+                generated_code = ""
+                logger.warning("No choices found in Azure OpenAI response!")
+            
+            # Additional debug: check if code is in a different field
+            if not generated_code and response:
+                logger.warning("Generated code is empty, checking alternative response fields...")
+                logger.info(f"Full response structure: {response}")
             
             # Prepare response in expected format
             result = {
@@ -200,7 +218,7 @@ Please analyze the sketch and create complete, functional code that represents t
                 }
             }
             
-            logger.info("Code generation completed successfully")
+            logger.info(f"Final result code length: {len(result.get('code', ''))}")
             return result
             
         except Exception as e:

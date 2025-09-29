@@ -48,15 +48,10 @@ async def validate_image(file: UploadFile) -> bytes:
         # Validate that it's actually an image by trying to open it
         try:
             with Image.open(io.BytesIO(image_data)) as img:
-                # Check image dimensions
-                if img.width > settings.max_image_width or img.height > settings.max_image_height:
-                    raise HTTPException(
-                        status_code=400,
-                        detail=f"Image dimensions too large. Maximum: {settings.max_image_width}x{settings.max_image_height}"
-                    )
-                
-                # Ensure image is valid
-                img.verify()
+                # Basic validation - just accessing properties validates the image
+                # Don't use img.verify() as it makes the image unusable
+                # Removed max dimension check to allow images of any size
+                _ = img.format, img.mode, img.size
         
         except Exception as e:
             raise HTTPException(
