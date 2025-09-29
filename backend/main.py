@@ -8,31 +8,33 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-# Create FastAPI app
-SERVE_FRONTEND = os.getenv("SERVE_FRONTEND", "true").lower() in {"1", "true", "yes"}
-STATIC_DIR = os.getenv("STATIC_DIR", "static")
+# Import AI routes
+from app.api.routes.ai import router as ai_router
 
+# Import settings
+from app.core.config import settings
+
+# Create FastAPI app
 app = FastAPI(
-    title="Canvas Smith API",
-    description="Backend API for Canvas Smith application (single-container deployment)",
-    version="1.0.0",
+    title=settings.app_name,
+    description="Backend API for Canvas Smith application - Convert sketches to code with AI",
+    version=settings.app_version,
     docs_url="/docs",
     redoc_url="/redoc",
+    debug=settings.debug,
 )
 
 # Configure CORS to allow frontend connections
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",  # Vite dev server
-        "http://localhost:3000",  # Alternative dev server
-        "http://localhost:4173",  # Vite preview
-        "*",  # Allow all origins for development - restrict in production
-    ],
+    allow_origins=settings.get_cors_origins_list(),
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
+
+# Include AI routes
+app.include_router(ai_router)
 
 
 # Response models
@@ -49,19 +51,19 @@ class StatusResponse(BaseModel):
     timestamp: str
 
 
-if SERVE_FRONTEND and os.path.isdir(STATIC_DIR):
+if settings.serve_frontend and os.path.isdir(settings.static_dir):
     # Mount static assets (e.g. /assets/*, CSS, JS) from Vite build
     # Expect Vite output copied to /app/static by Docker multi-stage build
     # Typical Vite structure: index.html + assets/ directory
     # We only mount the assets folder explicitly if it exists to avoid 404 noise
-    assets_path = os.path.join(STATIC_DIR, "assets")
+    assets_path = os.path.join(settings.static_dir, "assets")
     if os.path.isdir(assets_path):
         app.mount("/assets", StaticFiles(directory=assets_path), name="assets")
 
     @app.get("/", include_in_schema=False)
     async def serve_index():  # type: ignore
         """Serve the built frontend index.html if present, otherwise fallback JSON."""
-        index_file = os.path.join(STATIC_DIR, "index.html")
+        index_file = os.path.join(settings.static_dir, "index.html")
         if os.path.isfile(index_file):
             return FileResponse(index_file, media_type="text/html")
         return JSONResponse(
@@ -69,7 +71,7 @@ if SERVE_FRONTEND and os.path.isdir(STATIC_DIR):
                 "status": "success",
                 "message": "Canvas Smith Backend is working (no built frontend found).",
                 "timestamp": datetime.now().isoformat(),
-                "version": "1.0.0",
+                "version": settings.app_version,
             }
         )
 
@@ -81,10 +83,8 @@ else:
             status="success",
             message="Canvas Smith Backend is working! 🎨",
             timestamp=datetime.now().isoformat(),
-            version="1.0.0",
+            version=settings.app_version,
         )
-
-
 # Health check endpoint
 @app.get("/health", response_model=HealthResponse)
 async def health_check():
@@ -93,7 +93,7 @@ async def health_check():
         status="healthy",
         message="Backend is healthy and running",
         timestamp=datetime.now().isoformat(),
-        version="1.0.0",
+        version=settings.app_version,
     )
 
 
@@ -112,11 +112,11 @@ async def api_status():
 async def api_info():
     """Get API information and deployment mode."""
     return {
-        "name": "Canvas Smith API",
-        "version": "1.0.0",
+        "name": settings.app_name,
+        "version": settings.app_version,
         "description": "Backend API for Canvas Smith application",
-        "serve_frontend": SERVE_FRONTEND,
-        "static_dir_present": os.path.isdir(STATIC_DIR),
+        "serve_frontend": settings.serve_frontend,
+        "static_dir_present": os.path.isdir(settings.static_dir),
         "endpoints": {
             "root": "/",
             "health": "/health",
@@ -129,5 +129,10 @@ async def api_info():
 
 
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", 8000))
-    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=True, log_level="info")
+    uvicorn.run(
+        "main:app", 
+        host=settings.host, 
+        port=settings.port, 
+        reload=settings.reload, 
+        log_level=settings.log_level.lower()
+    )
