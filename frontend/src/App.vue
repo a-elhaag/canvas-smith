@@ -49,7 +49,30 @@ onMounted(() => {
 </script>
 
 <template>
-  
+  <div class="min-h-screen flex flex-col items-center justify-center bg-gray-100 p-4">
+    <h1 class="text-4xl font-bold mb-6">Vue 3 + TypeScript + Tailwind CSS + FastAPI</h1>
+    <div class="bg-white shadow-md rounded-lg p-6 w-full max-w-md text-center">
+      <p class="text-lg mb-4">
+        Backend Status:
+        <span
+          :class="{
+            'text-green-500': isConnected,
+            'text-red-500': !isConnected,
+          }"
+          >{{ backendStatus }}</span
+        >
+      </p>
+      <p class="text-sm text-gray-600 mb-6">{{ backendMessage }}</p>
+      <Button
+        :disabled="isLoading"
+        variant="primary"
+        size="md"
+        @click="openApiDocs"
+      >
+        {{ isLoading ? 'Loading...' : 'Open API Docs' }}
+      </Button>
+    </div>
+  </div>
 </template>
 
 <style scoped></style>

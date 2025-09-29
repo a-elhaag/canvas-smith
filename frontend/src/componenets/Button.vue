@@ -1,18 +1,3 @@
-<template>
-  <button
-    :class="buttonClasses"
-    :disabled="disabled"
-    @click="handleClick"
-    @mouseenter="isHovered = true"
-    @mouseleave="handleMouseLeave"
-    @mousedown="isPressed = true"
-    @mouseup="isPressed = false"
-    type="button"
-  >
-    <slot />
-  </button>
-</template>
-
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 
@@ -97,6 +82,21 @@ const buttonClasses = computed(() => {
   )
 })
 </script>
+
+<template>
+  <button
+    :class="buttonClasses"
+    :disabled="disabled"
+    @click="handleClick"
+    @mouseenter="isHovered = true"
+    @mouseleave="handleMouseLeave"
+    @mousedown="isPressed = true"
+    @mouseup="isPressed = false"
+    type="button"
+  >
+    <slot />
+  </button>
+</template>
 
 <style scoped>
 /* Additional custom styles if needed */
