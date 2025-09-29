@@ -2,17 +2,17 @@ import os
 from datetime import datetime
 
 import uvicorn
+# Import AI routes
+from app.api.routes.ai import router as ai_router
+# Import settings
+from app.core.config import settings
+# Import middleware
+from app.middleware.metrics_middleware import MetricsMiddleware
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
-
-# Import AI routes
-from app.api.routes.ai import router as ai_router
-
-# Import settings
-from app.core.config import settings
 
 # Create FastAPI app
 app = FastAPI(
@@ -32,6 +32,9 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
+
+# Add metrics middleware for production monitoring
+app.add_middleware(MetricsMiddleware)
 
 # Include AI routes
 app.include_router(ai_router)

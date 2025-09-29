@@ -1,5 +1,6 @@
 import os
-from typing import Optional, List
+from typing import List, Optional
+
 from pydantic import Field
 from pydantic_settings import BaseSettings
 
@@ -46,7 +47,7 @@ class Settings(BaseSettings):
     # Image Processing Settings
     max_image_size: int = Field(default=10*1024*1024, env="MAX_IMAGE_SIZE")  # 10MB
     allowed_image_types: str = Field(
-        default="image/jpeg,image/png,image/webp", 
+        default="image/jpeg,image/jpg,image/png,image/webp,image/gif,image/bmp,image/tiff,image/svg+xml", 
         env="ALLOWED_IMAGE_TYPES"
     )
     max_image_width: int = Field(default=2048, env="MAX_IMAGE_WIDTH")

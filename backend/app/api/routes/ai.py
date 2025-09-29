@@ -1,12 +1,14 @@
 import logging
 from datetime import datetime
-from typing import Optional, Dict, Any, List
-from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Depends
+from typing import Any, Dict, List, Optional
+
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
+from ...monitoring.metrics import metrics_collector
 from ...services.ai_service import ai_service
-from ...utils.image_processing import validate_image, process_image_for_ai
+from ...utils.image_processing import process_image_for_ai, validate_image
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -16,17 +18,32 @@ router = APIRouter(prefix="/api/ai", tags=["AI Services"])
 
 
 # Request/Response Models
-class CodeGenerationRequest(BaseModel):
-    """Request model for code generation (when not using file upload)."""
-    framework: str = Field(default="html", description="Target framework (html, react, vue, etc.)")
-    additional_instructions: Optional[str] = Field(None, description="Additional instructions for the AI")
+class TokenUsage(BaseModel):
+    """Token usage information."""
+    prompt_tokens: int
+    completion_tokens: int
+    total_tokens: int
+    estimated_cost_usd: float
+
+
+class ComponentAnalysis(BaseModel):
+    """Analysis of the generated component."""
+    component_type: str
+    has_script_setup: bool
+    has_typescript: bool
+    interactive_elements: Dict[str, int]
+    animations: Dict[str, int]
+    styling: Dict[str, bool]
+    vue_features: Dict[str, bool]
 
 
 class CodeGenerationResponse(BaseModel):
-    """Response model for code generation."""
+    """Response model for Vue.js code generation."""
     success: bool
     generated_code: str
-    framework: str
+    finish_reason: str
+    token_usage: TokenUsage
+    component_analysis: ComponentAnalysis
     metadata: Dict[str, Any]
     timestamp: str
     processing_time_ms: int
@@ -58,68 +75,119 @@ class HealthResponse(BaseModel):
 # Endpoints
 @router.post("/generate-code", response_model=CodeGenerationResponse)
 async def generate_code_from_sketch(
-    image: UploadFile = File(..., description="Hand-drawn website sketch image"),
-    framework: str = Form(default="html", description="Target framework"),
-    additional_instructions: Optional[str] = Form(None, description="Additional instructions")
+    image: UploadFile = File(..., description="Hand-drawn website sketch image (supports JPG, PNG, WebP, GIF, BMP, TIFF, SVG)")
 ):
     """
-    Generate code from a hand-drawn website sketch.
+    Generate functional Vue.js code from a hand-drawn website sketch.
     
-    Upload an image of a hand-drawn website sketch and get generated code in your preferred framework.
+    Simply upload an image of a hand-drawn website sketch and get a complete Vue.js component
+    with predicted functionality, animations, and interactive elements.
     
-    - **image**: Image file (PNG, JPEG, WebP) containing the website sketch
-    - **framework**: Target framework (html, react, vue, etc.)
-    - **additional_instructions**: Optional additional instructions for the AI
+    **Features:**
+    - **Smart Component Prediction**: AI predicts what buttons and elements should do
+    - **Animations & Transitions**: Includes smooth animations and hover effects
+    - **Interactive Elements**: Adds click handlers, form submissions, navigation
+    - **Vue.js 3**: Always generates Vue.js components with Composition API
+    - **Token Tracking**: Returns detailed token usage and cost estimation
+    - **All Image Formats**: Supports JPG, PNG, WebP, GIF, BMP, TIFF, SVG
+    
+    **Parameters:**
+    - **image**: Image file containing the website sketch (any common image format)
+    
+    **Returns:**
+    Complete Vue.js component code with token usage, component analysis, and metadata.
     """
     start_time = datetime.now()
     
     try:
-        # Validate the uploaded image
+        # Validate the uploaded image (now supports all image types)
         image_data = await validate_image(image)
         
         # Process image for AI service
         processed_data, image_format = await process_image_for_ai(image_data, image.content_type)
         
-        # Generate code using AI service
+        # Generate Vue.js code using AI service (no framework parameter needed)
         result = await ai_service.generate_code_from_image(
             image_data=processed_data,
-            image_format=image_format,
-            framework=framework,
-            additional_instructions=additional_instructions
+            image_format=image_format
         )
-        
-        # Debug: Log the AI service result
-        logger.info(f"AI service result keys: {list(result.keys())}")
-        logger.info(f"AI service code length: {len(result.get('code', '')) if result.get('code') else 'None/0'}")
-        logger.info(f"AI service code preview: {result.get('code', '')[:100] if result.get('code') else 'EMPTY'}")
-        
-        generated_code = result.get("code", "")
-        logger.info(f"Final generated_code length: {len(generated_code) if generated_code else 'None/0'}")
         
         # Calculate processing time
         processing_time = (datetime.now() - start_time).total_seconds() * 1000
         
+        # Extract token usage information
+        token_usage = result.get("token_usage", {})
+        component_analysis = result.get("metadata", {}).get("component_prediction", {})
+        
+        logger.info(f"Vue.js code generation completed - Tokens: {token_usage.get('total_tokens', 0)}")
+        
+        # Record metrics (always Vue.js)
+        metrics_collector.record_ai_generation(
+            framework="vue",
+            tokens_used=token_usage.get('total_tokens', 0),
+            cost_usd=token_usage.get('estimated_cost_usd', 0.0),
+            processing_time_ms=processing_time,
+            has_animations=result.get("metadata", {}).get("has_animations", False),
+            success=True
+        )
+        
         return CodeGenerationResponse(
             success=True,
-            generated_code=generated_code,
-            framework=framework,
+            generated_code=result.get("code", ""),
+            finish_reason=result.get("finish_reason", "unknown"),
+            token_usage=TokenUsage(
+                prompt_tokens=token_usage.get("prompt_tokens", 0),
+                completion_tokens=token_usage.get("completion_tokens", 0),
+                total_tokens=token_usage.get("total_tokens", 0),
+                estimated_cost_usd=token_usage.get("estimated_cost_usd", 0.0)
+            ),
+            component_analysis=ComponentAnalysis(
+                component_type=component_analysis.get("component_type", "vue"),
+                has_script_setup=component_analysis.get("has_script_setup", False),
+                has_typescript=component_analysis.get("has_typescript", False),
+                interactive_elements=component_analysis.get("interactive_elements", {}),
+                animations=component_analysis.get("animations", {}),
+                styling=component_analysis.get("styling", {}),
+                vue_features=component_analysis.get("vue_features", {})
+            ),
             metadata={
+                "framework": "vue",
                 "image_size_bytes": len(processed_data),
                 "image_format": image_format,
                 "ai_model": result.get("model", "unknown"),
                 "confidence": result.get("confidence", 0.0),
-                **result.get("metadata", {})
+                "has_animations": result.get("metadata", {}).get("has_animations", False),
+                "has_hover_effects": result.get("metadata", {}).get("has_hover_effects", False),
+                "generation_parameters": result.get("metadata", {}).get("generation_parameters", {})
             },
             timestamp=datetime.now().isoformat(),
             processing_time_ms=int(processing_time)
         )
         
     except HTTPException:
+        # Record failed generation
+        metrics_collector.record_ai_generation(
+            framework="vue",
+            tokens_used=0,
+            cost_usd=0.0,
+            processing_time_ms=(datetime.now() - start_time).total_seconds() * 1000,
+            has_animations=False,
+            success=False
+        )
         raise
     except Exception as e:
+        # Record failed generation
+        metrics_collector.record_ai_generation(
+            framework="vue",
+            tokens_used=0,
+            cost_usd=0.0,
+            processing_time_ms=(datetime.now() - start_time).total_seconds() * 1000,
+            has_animations=False,
+            success=False
+        )
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to generate code: {str(e)}"
+            detail=f"Failed to generate Vue.js code: {str(e)}"
         )
 
 
@@ -251,46 +319,120 @@ async def check_ai_configuration():
 @router.get("/supported-frameworks")
 async def get_supported_frameworks():
     """
-    Get list of supported frameworks for code generation.
+    Get information about the supported framework.
     
-    Returns the frameworks that the AI service can generate code for.
+    Canvas Smith generates Vue.js 3 components exclusively for optimal quality and consistency.
     """
     return JSONResponse({
-        "frameworks": [
-            {
-                "id": "html",
-                "name": "HTML/CSS",
-                "description": "Pure HTML with inline or embedded CSS"
-            },
-            {
-                "id": "react",
-                "name": "React",
-                "description": "React components with JSX and CSS"
-            },
-            {
-                "id": "vue",
-                "name": "Vue.js",
-                "description": "Vue.js single file components"
-            },
-            {
-                "id": "angular",
-                "name": "Angular",
-                "description": "Angular components with TypeScript"
-            },
-            {
-                "id": "tailwind",
-                "name": "HTML + Tailwind CSS",
-                "description": "HTML with Tailwind CSS utility classes"
-            },
-            {
-                "id": "bootstrap",
-                "name": "HTML + Bootstrap",
-                "description": "HTML with Bootstrap framework"
-            }
+        "framework": {
+            "id": "vue",
+            "name": "Vue.js 3",
+            "description": "Vue.js components with Composition API, animations, and TypeScript support",
+            "features": [
+                "composition_api",
+                "script_setup_syntax", 
+                "animations_and_transitions",
+                "hover_effects",
+                "reactive_data",
+                "component_prediction",
+                "tailwind_css_support",
+                "typescript_integration"
+            ]
+        },
+        "why_vue_only": [
+            "Optimized AI prompts for Vue.js generate higher quality code",
+            "Consistent output format and structure",
+            "Better animation and interaction integration", 
+            "Enhanced component intelligence and prediction",
+            "Streamlined development workflow"
         ],
-        "default": "html",
+        "capabilities": {
+            "smart_component_prediction": "AI predicts button functionality and interactions",
+            "automatic_animations": "Smooth transitions and hover effects included",
+            "responsive_design": "Mobile-first responsive components",
+            "modern_syntax": "Vue 3 Composition API with <script setup>",
+            "styling": "Tailwind CSS classes with custom CSS animations"
+        },
         "timestamp": datetime.now().isoformat()
     })
+
+
+@router.get("/metrics")
+async def get_metrics(hours: int = 24):
+    """
+    Get production metrics and analytics.
+    
+    Returns comprehensive metrics including:
+    - Request statistics and performance
+    - AI generation analytics
+    - Token usage and cost tracking
+    - Error rates and health status
+    
+    Args:
+        hours: Number of hours to include in metrics (default: 24)
+    """
+    try:
+        metrics = metrics_collector.get_summary(hours=hours)
+        return JSONResponse({
+            "success": True,
+            "metrics": metrics,
+            "timestamp": datetime.now().isoformat()
+        })
+    except Exception as e:
+        logger.error(f"Failed to get metrics: {str(e)}")
+        return JSONResponse({
+            "success": False,
+            "error": str(e),
+            "timestamp": datetime.now().isoformat()
+        }, status_code=500)
+
+
+@router.get("/health-detailed")
+async def get_detailed_health():
+    """
+    Get detailed health status with metrics.
+    
+    Returns comprehensive health information including:
+    - AI service connectivity
+    - Recent error rates
+    - Performance metrics
+    - System status
+    """
+    try:
+        # Get AI service health
+        ai_health = await ai_service.health_check()
+        
+        # Get system metrics health
+        metrics_health = metrics_collector.get_health_status()
+        
+        # Get configuration status
+        config_status = {
+            "api_key_configured": bool(ai_service.api_key),
+            "endpoint_configured": bool(ai_service.endpoint),
+            "deployment_configured": bool(ai_service.deployment_name)
+        }
+        
+        overall_healthy = (
+            ai_health.get("healthy", False) and
+            metrics_health.get("status") != "unhealthy" and
+            all(config_status.values())
+        )
+        
+        return JSONResponse({
+            "overall_status": "healthy" if overall_healthy else "unhealthy",
+            "ai_service": ai_health,
+            "metrics": metrics_health,
+            "configuration": config_status,
+            "timestamp": datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Health check failed: {str(e)}")
+        return JSONResponse({
+            "overall_status": "error",
+            "error": str(e),
+            "timestamp": datetime.now().isoformat()
+        }, status_code=500)
 
 
 # Note: Error handlers are configured in main.py for the main app

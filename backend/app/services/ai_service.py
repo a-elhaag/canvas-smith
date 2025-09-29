@@ -1,8 +1,8 @@
 import asyncio
 import base64
 import logging
-from typing import Optional, Dict, Any, List
 from io import BytesIO
+from typing import Any, Dict, List, Optional
 
 import aiohttp
 from fastapi import HTTPException
@@ -110,21 +110,17 @@ class AIService:
     async def generate_code_from_image(
         self, 
         image_data: bytes, 
-        image_format: str = "png",
-        framework: str = "html",
-        additional_instructions: Optional[str] = None
+        image_format: str = "png"
     ) -> Dict[str, Any]:
         """
-        Generate code from a hand-drawn website sketch using Azure OpenAI.
+        Generate functional Vue.js code from a hand-drawn website sketch using Azure OpenAI.
         
         Args:
             image_data: Binary image data
             image_format: Image format (png, jpg, webp)
-            framework: Target framework (html, react, vue, etc.)
-            additional_instructions: Optional additional instructions for the AI
         
         Returns:
-            Dictionary containing generated code and metadata
+            Dictionary containing generated Vue.js code, token usage, and metadata
         """
         self._validate_configuration()
         
@@ -132,27 +128,67 @@ class AIService:
             # Encode image to base64
             image_base64 = base64.b64encode(image_data).decode('utf-8')
             
-            # Create system prompt for code generation
-            system_prompt = f"""You are an expert web developer and UI/UX designer. Your task is to analyze hand-drawn website sketches and convert them into clean, functional {framework} code.
+            # Create comprehensive system prompt for Vue.js code generation
+            system_prompt = """You are an expert Vue.js developer and UI/UX designer specializing in creating interactive, animated web components from sketches.
 
-Guidelines:
-1. Analyze the sketch carefully and identify UI components, layout structure, and content areas
-2. Generate clean, semantic, and accessible code
-3. Use modern CSS practices (Flexbox/Grid, responsive design)
-4. Include placeholder content where text/images are indicated
-5. Ensure the code is production-ready and follows best practices
-6. Make the design responsive and mobile-friendly
+CORE MISSION: Transform hand-drawn sketches into fully functional Vue.js components with:
+1. **Smart Component Prediction**: Analyze the sketch to predict component functionality
+2. **Interactive Elements**: Add appropriate click handlers, form submissions, navigation
+3. **Smooth Animations**: Implement Vue transitions and CSS animations
+4. **Hover Effects**: Add engaging hover states for interactive elements
+5. **Motion Design**: Use CSS transforms, transitions, and Vue animations
 
-Output only the code without explanations or markdown formatting."""
+TECHNICAL REQUIREMENTS:
+- Framework: Vue.js 3 with Composition API
+- Use <script setup> syntax with TypeScript where beneficial
+- Implement responsive design with Tailwind CSS or modern CSS
+- Add smooth transitions between states
+- Include loading states and micro-interactions
+- Predict button functionality based on visual context
 
-            user_prompt = f"""Convert this hand-drawn website sketch into {framework} code. 
+COMPONENT INTELLIGENCE:
+- **Buttons**: Predict actions (submit, navigate, toggle, etc.) based on placement and context
+- **Forms**: Add validation, submission handling, and success states
+- **Cards**: Include hover animations, click interactions
+- **Navigation**: Implement active states, smooth scrolling
+- **Images**: Add lazy loading, hover zoom effects
+- **Lists**: Include item animations, filtering capabilities
 
-Framework: {framework}
-Additional instructions: {additional_instructions or 'Make it responsive and modern'}
+ANIMATION GUIDELINES:
+- Use Vue <Transition> components for state changes
+- Implement CSS transforms for hover effects
+- Add spring-like animations for user interactions
+- Include entrance animations for page elements
+- Use appropriate easing functions (cubic-bezier)
 
-Please analyze the sketch and create complete, functional code that represents the drawn design."""
+OUTPUT FORMAT:
+Return ONLY the complete Vue.js component code with:
+- Single File Component (.vue) structure
+- Reactive data and methods using Composition API
+- CSS with animations and transitions
+- TypeScript where appropriate
+- Comprehensive functionality prediction
 
-            # Prepare Azure OpenAI payload
+Do not include explanations, markdown formatting, or code blocks - just the raw Vue component code."""
+
+            user_prompt = """Analyze this hand-drawn website sketch and create a complete, functional Vue.js component.
+
+ANALYSIS REQUIREMENTS:
+1. **Visual Elements**: Identify all UI components, layout structure, and content areas
+2. **Functional Prediction**: Determine what each button/element should do based on context
+3. **User Flow**: Predict the intended user interactions and navigation
+4. **Component Behavior**: Add appropriate reactive data and methods
+
+IMPLEMENTATION REQUIREMENTS:
+- Create a modern, interactive Vue.js component with animations and hover effects
+- Include smooth animations and hover effects
+- Add predicted functionality for interactive elements
+- Implement responsive design principles
+- Use modern Vue.js patterns and best practices
+
+Create a production-ready component that brings this sketch to life with engaging interactions and animations."""
+
+            # Prepare Azure OpenAI payload with enhanced parameters
             payload = {
                 "messages": [
                     {
@@ -173,52 +209,68 @@ Please analyze the sketch and create complete, functional code that represents t
                         ]
                     }
                 ],
-                "max_completion_tokens": self.max_tokens
+                "max_completion_tokens": self.max_tokens,
+                "temperature": 0.7,  # Slight creativity for animations and interactions
+                "top_p": 0.95,
+                "frequency_penalty": 0.0,
+                "presence_penalty": 0.0
             }
             
-            logger.info(f"Generating {framework} code from image (size: {len(image_data)} bytes)")
+            logger.info(f"Generating Vue.js code from image (size: {len(image_data)} bytes)")
             
             # Make request to Azure OpenAI
             endpoint = self._get_chat_endpoint()
             response = await self._make_ai_request(endpoint, payload)
             
-            # Debug: Log the full response structure
-            logger.info(f"Raw Azure OpenAI response keys: {list(response.keys())}")
-            logger.info(f"Response choices count: {len(response.get('choices', []))}")
-            
-            # Extract the generated code
+            # Extract the generated code and token usage
             choices = response.get("choices", [])
+            usage = response.get("usage", {})
+            
             if choices:
                 message = choices[0].get("message", {})
-                logger.info(f"Message keys: {list(message.keys())}")
                 generated_code = message.get("content", "")
-                logger.info(f"Generated code length: {len(generated_code) if generated_code else 'None/0'}")
-                logger.info(f"Generated code preview: {generated_code[:100] if generated_code else 'EMPTY'}")
+                finish_reason = choices[0].get("finish_reason", "unknown")
+                
+                logger.info(f"Code generation completed - Length: {len(generated_code)} chars, Finish reason: {finish_reason}")
             else:
                 generated_code = ""
+                finish_reason = "no_choices"
                 logger.warning("No choices found in Azure OpenAI response!")
             
-            # Additional debug: check if code is in a different field
-            if not generated_code and response:
-                logger.warning("Generated code is empty, checking alternative response fields...")
-                logger.info(f"Full response structure: {response}")
+            # Extract detailed token usage
+            prompt_tokens = usage.get("prompt_tokens", 0)
+            completion_tokens = usage.get("completion_tokens", 0)
+            total_tokens = usage.get("total_tokens", 0)
             
-            # Prepare response in expected format
+            logger.info(f"Token usage - Prompt: {prompt_tokens}, Completion: {completion_tokens}, Total: {total_tokens}")
+            
+            # Prepare comprehensive response
             result = {
                 "code": generated_code,
                 "model": f"azure-openai-{self.deployment_name}",
-                "confidence": 0.95,  # Azure OpenAI typically has high confidence
+                "confidence": 0.95,
+                "finish_reason": finish_reason,
+                "token_usage": {
+                    "prompt_tokens": prompt_tokens,
+                    "completion_tokens": completion_tokens,
+                    "total_tokens": total_tokens,
+                    "estimated_cost_usd": self._estimate_cost(prompt_tokens, completion_tokens)
+                },
                 "metadata": {
-                    "framework": framework,
+                    "framework": "vue",
                     "image_size_bytes": len(image_data),
                     "image_format": image_format,
-                    "tokens_used": response.get("usage", {}).get("total_tokens", 0),
-                    "prompt_tokens": response.get("usage", {}).get("prompt_tokens", 0),
-                    "completion_tokens": response.get("usage", {}).get("completion_tokens", 0)
+                    "has_animations": "transition" in generated_code.lower() or "animation" in generated_code.lower(),
+                    "has_hover_effects": "hover:" in generated_code.lower() or ":hover" in generated_code.lower(),
+                    "component_prediction": self._analyze_generated_component(generated_code),
+                    "generation_parameters": {
+                        "temperature": 0.7,
+                        "max_tokens": self.max_tokens,
+                        "model_version": self.api_version
+                    }
                 }
             }
             
-            logger.info(f"Final result code length: {len(result.get('code', ''))}")
             return result
             
         except Exception as e:
@@ -227,6 +279,61 @@ Please analyze the sketch and create complete, functional code that represents t
                 status_code=500,
                 detail=f"Failed to generate code: {str(e)}"
             )
+    
+    def _estimate_cost(self, prompt_tokens: int, completion_tokens: int) -> float:
+        """
+        Estimate the cost of the API call based on token usage.
+        
+        Note: This is an approximate calculation based on typical Azure OpenAI pricing.
+        Actual costs may vary based on your specific pricing tier and region.
+        """
+        # Approximate pricing (as of 2024) - update based on your actual pricing
+        prompt_cost_per_1k = 0.03  # $0.03 per 1K prompt tokens
+        completion_cost_per_1k = 0.06  # $0.06 per 1K completion tokens
+        
+        prompt_cost = (prompt_tokens / 1000) * prompt_cost_per_1k
+        completion_cost = (completion_tokens / 1000) * completion_cost_per_1k
+        
+        return round(prompt_cost + completion_cost, 6)
+    
+    def _analyze_generated_component(self, code: str) -> Dict[str, Any]:
+        """
+        Analyze the generated component to extract insights about its functionality.
+        """
+        if not code:
+            return {"error": "No code to analyze"}
+        
+        code_lower = code.lower()
+        
+        analysis = {
+            "component_type": "vue" if "<template>" in code_lower else "unknown",
+            "has_script_setup": "<script setup" in code_lower,
+            "has_typescript": "typescript" in code_lower or "lang=\"ts\"" in code_lower,
+            "interactive_elements": {
+                "buttons": code_lower.count("button") + code_lower.count("@click"),
+                "forms": code_lower.count("form") + code_lower.count("@submit"),
+                "inputs": code_lower.count("input") + code_lower.count("v-model"),
+                "links": code_lower.count("router-link") + code_lower.count("href")
+            },
+            "animations": {
+                "vue_transitions": code_lower.count("<transition") + code_lower.count("transition-"),
+                "css_animations": code_lower.count("@keyframes") + code_lower.count("animation:"),
+                "hover_effects": code_lower.count("hover:") + code_lower.count(":hover")
+            },
+            "styling": {
+                "tailwind_classes": "class=" in code and any(tw in code_lower for tw in ["bg-", "text-", "p-", "m-", "flex", "grid"]),
+                "custom_css": "<style" in code_lower,
+                "scoped_styles": "scoped" in code_lower
+            },
+            "vue_features": {
+                "reactive_data": "ref(" in code or "reactive(" in code,
+                "computed_properties": "computed(" in code,
+                "watchers": "watch(" in code,
+                "lifecycle_hooks": any(hook in code for hook in ["onMounted", "onUpdated", "onUnmounted"])
+            }
+        }
+        
+        return analysis
     
     async def chat_assistance(
         self, 
