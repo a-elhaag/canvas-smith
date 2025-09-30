@@ -11,7 +11,7 @@ async def validate_image(file: UploadFile) -> bytes:
     """
     Validate uploaded image file and return image data.
     
-    Supports: JPG, JPEG, PNG, WebP, GIF, BMP, TIFF, SVG
+    Supports: JPG, JPEG, PNG, WebP, GIF, BMP, TIFF
     
     Args:
         file: Uploaded file object
@@ -29,10 +29,10 @@ async def validate_image(file: UploadFile) -> bytes:
             detail=f"File too large. Maximum size is {settings.max_image_size // (1024 * 1024)}MB"
         )
     
-    # Check content type - now supports all common image formats
+    # Check content type - supports common image formats (no SVG)
     allowed_types = settings.get_allowed_image_types_list()
     if file.content_type not in allowed_types:
-        # Also check file extension as fallback for SVG and other formats
+        # Also check file extension as fallback
         filename = file.filename or ""
         extension = filename.lower().split('.')[-1] if '.' in filename else ""
         
@@ -44,15 +44,14 @@ async def validate_image(file: UploadFile) -> bytes:
             'gif': 'image/gif',
             'bmp': 'image/bmp',
             'tiff': 'image/tiff',
-            'tif': 'image/tiff',
-            'svg': 'image/svg+xml'
+            'tif': 'image/tiff'
         }
         
         if extension in extension_to_mime and extension_to_mime[extension] in allowed_types:
             # Override content type based on file extension
             file.content_type = extension_to_mime[extension]
         else:
-            supported_formats = "JPG, JPEG, PNG, WebP, GIF, BMP, TIFF, SVG"
+            supported_formats = "JPG, JPEG, PNG, WebP, GIF, BMP, TIFF"
             raise HTTPException(
                 status_code=400,
                 detail=f"Invalid file type '{file.content_type}'. Supported formats: {supported_formats}"
@@ -71,22 +70,10 @@ async def validate_image(file: UploadFile) -> bytes:
         
         # Validate that it's actually an image by trying to open it
         try:
-            # Handle SVG separately as PIL doesn't support it directly
-            if file.content_type == 'image/svg+xml':
-                # Basic SVG validation - check if it contains SVG tags
-                content_str = image_data.decode('utf-8', errors='ignore').lower()
-                if '<svg' not in content_str or '</svg>' not in content_str:
-                    raise HTTPException(
-                        status_code=400,
-                        detail="Invalid SVG file format"
-                    )
-            else:
-                with Image.open(io.BytesIO(image_data)) as img:
-                    # Basic validation - accessing properties validates the image
-                    _ = img.format, img.mode, img.size
+            with Image.open(io.BytesIO(image_data)) as img:
+                # Basic validation - accessing properties validates the image
+                _ = img.format, img.mode, img.size
         
-        except HTTPException:
-            raise
         except Exception as e:
             raise HTTPException(
                 status_code=400,
@@ -109,7 +96,6 @@ async def process_image_for_ai(image_data: bytes, content_type: str) -> Tuple[by
     Process image for AI service consumption.
     
     This function optimizes the image for AI processing by:
-    - Converting SVG to PNG for AI compatibility
     - Converting to RGB if needed
     - Resizing if too large
     - Optimizing quality/compression
@@ -123,32 +109,7 @@ async def process_image_for_ai(image_data: bytes, content_type: str) -> Tuple[by
         Tuple[bytes, str]: Processed image data and format
     """
     try:
-        # Handle SVG separately - convert to PNG for AI processing
-        if content_type == 'image/svg+xml':
-            try:
-                # For SVG, we'll convert to PNG
-                # Note: This is a simplified approach. In production, you might want to use 
-                # libraries like cairosvg or wand for better SVG rasterization
-                from PIL import Image, ImageDraw
-
-                # Create a simple PNG representation for SVG
-                # This is basic - you may want to integrate proper SVG rendering
-                img = Image.new('RGB', (800, 600), color='white')
-                draw = ImageDraw.Draw(img)
-                draw.text((50, 50), "SVG Image Detected", fill='black')
-                draw.text((50, 100), "Converted to PNG for AI processing", fill='gray')
-                
-                output_buffer = io.BytesIO()
-                img.save(output_buffer, format="PNG", optimize=True)
-                return output_buffer.getvalue(), "png"
-                
-            except Exception as e:
-                raise HTTPException(
-                    status_code=500,
-                    detail=f"Failed to process SVG image: {str(e)}"
-                )
-        
-        # Process regular image formats
+        # Process image formats supported by PIL
         with Image.open(io.BytesIO(image_data)) as img:
             # Convert to RGB if needed (handles RGBA, grayscale, etc.)
             if img.mode not in ('RGB', 'L'):
@@ -190,8 +151,6 @@ async def process_image_for_ai(image_data: bytes, content_type: str) -> Tuple[by
             status_code=500,
             detail=f"Failed to process image for AI: {str(e)}"
         )
-
-
 def get_image_info(image_data: bytes) -> dict:
     """
     Get information about an image.

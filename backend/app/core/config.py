@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     # AI Service Settings
     ai_timeout: int = Field(default=120, env="AI_TIMEOUT")
     ai_max_retries: int = Field(default=3, env="AI_MAX_RETRIES")
-    ai_max_tokens: int = Field(default=4000, env="AI_MAX_TOKENS")
+    ai_max_tokens: int = Field(default=6000, env="AI_MAX_TOKENS")  # Increased for complex components
     
     # Database Configuration
     database_url: str = Field(default="sqlite:///./canvas_smith.db", env="DATABASE_URL")
@@ -47,7 +47,7 @@ class Settings(BaseSettings):
     # Image Processing Settings
     max_image_size: int = Field(default=10*1024*1024, env="MAX_IMAGE_SIZE")  # 10MB
     allowed_image_types: str = Field(
-        default="image/jpeg,image/jpg,image/png,image/webp,image/gif,image/bmp,image/tiff,image/svg+xml", 
+        default="image/jpeg,image/jpg,image/png,image/webp,image/gif,image/bmp,image/tiff", 
         env="ALLOWED_IMAGE_TYPES"
     )
     max_image_width: int = Field(default=2048, env="MAX_IMAGE_WIDTH")

@@ -98,6 +98,14 @@ class AIService:
                         detail="Unable to connect to AI service. Please try again later."
                     )
             
+            except Exception as e:
+                logger.error(f"Unexpected error during AI request: {str(e)}")
+                if attempt == self.max_retries - 1:
+                    raise HTTPException(
+                        status_code=503,
+                        detail="AI service unavailable after multiple attempts."
+                    )
+            
             # Wait before retry
             if attempt < self.max_retries - 1:
                 await asyncio.sleep(1)
@@ -210,7 +218,8 @@ Create a production-ready component that brings this sketch to life with engagin
                     }
                 ],
                 "max_completion_tokens": self.max_tokens,
-                "temperature": 0.7,  # Slight creativity for animations and interactions
+                # Remove temperature for GPT-4 compatibility (use default)
+                # "temperature": 0.7,  # Some models don't support custom temperature
                 "top_p": 0.95,
                 "frequency_penalty": 0.0,
                 "presence_penalty": 0.0
@@ -231,7 +240,15 @@ Create a production-ready component that brings this sketch to life with engagin
                 generated_code = message.get("content", "")
                 finish_reason = choices[0].get("finish_reason", "unknown")
                 
-                logger.info(f"Code generation completed - Length: {len(generated_code)} chars, Finish reason: {finish_reason}")
+                # Log different finish reasons for monitoring
+                if finish_reason == "length":
+                    logger.warning(f"Code generation hit token limit - consider increasing AI_MAX_TOKENS (current: {self.max_tokens})")
+                elif finish_reason == "stop":
+                    logger.info(f"Code generation completed successfully")
+                else:
+                    logger.info(f"Code generation finished with reason: {finish_reason}")
+                    
+                logger.info(f"Generated code length: {len(generated_code)} chars, Finish reason: {finish_reason}")
             else:
                 generated_code = ""
                 finish_reason = "no_choices"
@@ -264,9 +281,10 @@ Create a production-ready component that brings this sketch to life with engagin
                     "has_hover_effects": "hover:" in generated_code.lower() or ":hover" in generated_code.lower(),
                     "component_prediction": self._analyze_generated_component(generated_code),
                     "generation_parameters": {
-                        "temperature": 0.7,
+                        "temperature": "default",  # Using model default
                         "max_tokens": self.max_tokens,
-                        "model_version": self.api_version
+                        "model_version": self.api_version,
+                        "top_p": 0.95
                     }
                 }
             }

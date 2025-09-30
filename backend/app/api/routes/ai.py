@@ -75,7 +75,7 @@ class HealthResponse(BaseModel):
 # Endpoints
 @router.post("/generate-code", response_model=CodeGenerationResponse)
 async def generate_code_from_sketch(
-    image: UploadFile = File(..., description="Hand-drawn website sketch image (supports JPG, PNG, WebP, GIF, BMP, TIFF, SVG)")
+    image: UploadFile = File(..., description="Hand-drawn website sketch image (supports JPG, PNG, WebP, GIF, BMP, TIFF)")
 ):
     """
     Generate functional Vue.js code from a hand-drawn website sketch.
@@ -89,10 +89,10 @@ async def generate_code_from_sketch(
     - **Interactive Elements**: Adds click handlers, form submissions, navigation
     - **Vue.js 3**: Always generates Vue.js components with Composition API
     - **Token Tracking**: Returns detailed token usage and cost estimation
-    - **All Image Formats**: Supports JPG, PNG, WebP, GIF, BMP, TIFF, SVG
+    - **All Image Formats**: Supports JPG, PNG, WebP, GIF, BMP, TIFF
     
     **Parameters:**
-    - **image**: Image file containing the website sketch (any common image format)
+    - **image**: Image file containing the website sketch (JPG, PNG, WebP, GIF, BMP, TIFF)
     
     **Returns:**
     Complete Vue.js component code with token usage, component analysis, and metadata.

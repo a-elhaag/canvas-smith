@@ -20,7 +20,6 @@ curl -X POST "http://localhost:8000/api/ai/generate-code" \
 - ✅ **GIF** - Animated or static images
 - ✅ **BMP** - Bitmap images
 - ✅ **TIFF** - High-quality images
-- ✅ **SVG** - Vector graphics (converted to PNG for AI)
 
 ### Response Format
 
@@ -72,7 +71,7 @@ curl -X POST "http://localhost:8000/api/ai/generate-code" \
 ### Features
 
 🎯 **Vue.js 3 Only** - Optimized for Vue.js with Composition API  
-📸 **All Image Formats** - Upload any common image format  
+📸 **6 Image Formats** - Upload JPG, PNG, WebP, GIF, BMP, TIFF  
 🧠 **Smart Predictions** - AI predicts button functionality and interactions  
 🎨 **Animations Included** - Smooth transitions and hover effects  
 📊 **Token Tracking** - Detailed usage and cost information  
