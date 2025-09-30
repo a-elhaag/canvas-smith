@@ -1,7 +1,6 @@
 import asyncio
 import base64
 import logging
-from io import BytesIO
 from typing import Any, Dict, List, Optional
 
 import aiohttp
@@ -48,14 +47,15 @@ class AIService:
     def _get_headers(self) -> Dict[str, str]:
         """Get common headers for Azure OpenAI API requests."""
         return {
-            "api-key": self.api_key,
+            "api-key": self.api_key.get_secret_value() if hasattr(self.api_key, "get_secret_value") else str(self.api_key),
             "Content-Type": "application/json",
             "User-Agent": f"{settings.app_name}/{settings.app_version}"
         }
     
     def _get_chat_endpoint(self) -> str:
         """Get the Azure OpenAI chat completions endpoint."""
-        return f"{self.endpoint.rstrip('/')}/openai/deployments/{self.deployment_name}/chat/completions?api-version={self.api_version}"
+        endpoint_base = str(self.endpoint).rstrip("/")
+        return f"{endpoint_base}/openai/deployments/{self.deployment_name}/chat/completions?api-version={self.api_version}"
     
     async def _make_ai_request(self, endpoint: str, payload: Dict[str, Any]) -> Dict[str, Any]:
         """Make an HTTP request to the AI service with retry logic."""
@@ -116,9 +116,10 @@ class AIService:
         )
     
     async def generate_code_from_image(
-        self, 
-        image_data: bytes, 
-        image_format: str = "png"
+        self,
+        image_data: bytes,
+        image_format: str = "png",
+        user_prompt: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Generate functional Vue.js code from a hand-drawn website sketch using Azure OpenAI.
@@ -179,7 +180,9 @@ Return ONLY the complete Vue.js component code with:
 
 Do not include explanations, markdown formatting, or code blocks - just the raw Vue component code."""
 
-            user_prompt = """Analyze this hand-drawn website sketch and create a complete, functional Vue.js component.
+            effective_user_prompt = user_prompt.strip() if user_prompt else "Analyze this hand-drawn website sketch and create a complete, functional Vue.js component. Focus on predicting what each UI element should do and produce production-ready Vue.js code."
+
+            detailed_prompt = f"""{effective_user_prompt}
 
 ANALYSIS REQUIREMENTS:
 1. **Visual Elements**: Identify all UI components, layout structure, and content areas
@@ -189,10 +192,9 @@ ANALYSIS REQUIREMENTS:
 
 IMPLEMENTATION REQUIREMENTS:
 - Create a modern, interactive Vue.js component with animations and hover effects
-- Include smooth animations and hover effects
-- Add predicted functionality for interactive elements
-- Implement responsive design principles
-- Use modern Vue.js patterns and best practices
+- Add predicted functionality for interactive elements and connect actions to appropriate handlers
+- Implement responsive design principles and accessibility best practices
+- Use modern Vue.js patterns and best practices with Composition API
 
 Create a production-ready component that brings this sketch to life with engaging interactions and animations."""
 
@@ -206,7 +208,7 @@ Create a production-ready component that brings this sketch to life with engagin
                     {
                         "role": "user", 
                         "content": [
-                            {"type": "text", "text": user_prompt},
+                            {"type": "text", "text": detailed_prompt},
                             {
                                 "type": "image_url",
                                 "image_url": {
@@ -277,6 +279,7 @@ Create a production-ready component that brings this sketch to life with engagin
                     "framework": "vue",
                     "image_size_bytes": len(image_data),
                     "image_format": image_format,
+                    "user_prompt": effective_user_prompt,
                     "has_animations": "transition" in generated_code.lower() or "animation" in generated_code.lower(),
                     "has_hover_effects": "hover:" in generated_code.lower() or ":hover" in generated_code.lower(),
                     "component_prediction": self._analyze_generated_component(generated_code),
@@ -353,94 +356,6 @@ Create a production-ready component that brings this sketch to life with engagin
         
         return analysis
     
-    async def chat_assistance(
-        self, 
-        message: str, 
-        context: Optional[Dict[str, Any]] = None,
-        conversation_id: Optional[str] = None
-    ) -> Dict[str, Any]:
-        """
-        Provide chat assistance for code modifications and questions using Azure OpenAI.
-        
-        Args:
-            message: User's message/question
-            context: Optional context (previous code, project info, etc.)
-            conversation_id: Optional conversation ID for continuity
-        
-        Returns:
-            Dictionary containing AI response and metadata
-        """
-        self._validate_configuration()
-        
-        try:
-            # Create system prompt for chat assistance
-            system_prompt = """You are an expert web developer and coding assistant. You help users with:
-1. Modifying and improving generated code
-2. Debugging and fixing issues
-3. Adding new features and functionality
-4. Optimizing performance and accessibility
-5. Converting between different frameworks
-6. Providing best practices and recommendations
-
-Always provide clear, practical advice with code examples when appropriate. Format code blocks with proper syntax highlighting."""
-
-            # Build messages array
-            messages = [{"role": "system", "content": system_prompt}]
-            
-            # Add context if provided
-            if context:
-                context_message = "Here's the current context:\n"
-                if context.get("code"):
-                    context_message += f"Current code:\n```{context.get('framework', 'html')}\n{context['code']}\n```\n"
-                if context.get("framework"):
-                    context_message += f"Framework: {context['framework']}\n"
-                if context.get("additional_info"):
-                    context_message += f"Additional info: {context['additional_info']}\n"
-                
-                messages.append({"role": "user", "content": context_message})
-            
-            # Add the current user message
-            messages.append({"role": "user", "content": message})
-            
-            # Prepare Azure OpenAI payload
-            payload = {
-                "messages": messages,
-                "max_completion_tokens": min(self.max_tokens, 1500)  # Limit for chat responses
-            }
-            
-            logger.info(f"Processing chat message (context: {bool(context)}, conv_id: {conversation_id})")
-            
-            # Make request to Azure OpenAI
-            endpoint = self._get_chat_endpoint()
-            response = await self._make_ai_request(endpoint, payload)
-            
-            # Extract the response
-            ai_response = response.get("choices", [{}])[0].get("message", {}).get("content", "")
-            
-            # Prepare response in expected format
-            result = {
-                "response": ai_response,
-                "conversation_id": conversation_id,
-                "model": f"azure-openai-{self.deployment_name}",
-                "confidence": 0.95,
-                "metadata": {
-                    "tokens_used": response.get("usage", {}).get("total_tokens", 0),
-                    "prompt_tokens": response.get("usage", {}).get("prompt_tokens", 0),
-                    "completion_tokens": response.get("usage", {}).get("completion_tokens", 0),
-                    "has_context": bool(context)
-                }
-            }
-            
-            logger.info("Chat assistance completed successfully")
-            return result
-            
-        except Exception as e:
-            logger.error(f"Chat assistance failed: {str(e)}")
-            raise HTTPException(
-                status_code=500,
-                detail=f"Failed to process chat message: {str(e)}"
-            )
-    
     async def health_check(self) -> Dict[str, Any]:
         """Check if Azure OpenAI service is available with detailed status."""
         result = {
@@ -497,3 +412,4 @@ Always provide clear, practical advice with code examples when appropriate. Form
 
 # Create global AI service instance
 ai_service = AIService()
+

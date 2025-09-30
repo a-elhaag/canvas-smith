@@ -1,100 +1,109 @@
-import os
-from typing import List, Optional
+from datetime import timedelta
+from typing import Annotated, List, Literal, Optional
 
-from pydantic import Field
-from pydantic_settings import BaseSettings
+from pydantic import (AnyUrl, ByteSize, Field, NonNegativeInt, PositiveInt,
+                      SecretStr)
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    """Application settings with environment variable support."""
-    
-    # Basic App Settings
-    app_name: str = Field(default="Canvas Smith API", env="APP_NAME")
-    app_version: str = Field(default="1.0.0", env="APP_VERSION")
-    debug: bool = Field(default=False, env="DEBUG")
-    
-    # Server Settings
-    host: str = Field(default="0.0.0.0", env="HOST")
-    port: int = Field(default=8000, env="PORT")
-    reload: bool = Field(default=True, env="RELOAD")
-    
-    # Azure OpenAI Configuration
-    azure_openai_api_key: str = Field(env="AZURE_OPENAI_API_KEY")
-    azure_openai_endpoint: str = Field(env="AZURE_OPENAI_ENDPOINT")
-    azure_openai_deployment_name: str = Field(env="AZURE_OPENAI_DEPLOYMENT_NAME")
-    azure_openai_api_version: str = Field(default="2024-02-01", env="AZURE_OPENAI_API_VERSION")
-    
-    # AI Service Settings
-    ai_timeout: int = Field(default=120, env="AI_TIMEOUT")
-    ai_max_retries: int = Field(default=3, env="AI_MAX_RETRIES")
-    ai_max_tokens: int = Field(default=6000, env="AI_MAX_TOKENS")  # Increased for complex components
-    
-    # Database Configuration
-    database_url: str = Field(default="sqlite:///./canvas_smith.db", env="DATABASE_URL")
-    db_echo: bool = Field(default=False, env="DB_ECHO")
-    db_pool_size: int = Field(default=5, env="DB_POOL_SIZE")
-    db_max_overflow: int = Field(default=10, env="DB_MAX_OVERFLOW")
-    
-    # Security Settings
-    secret_key: str = Field(default="dev-secret-key-change-in-production", env="SECRET_KEY")
-    
-    # Azure Blob Storage (Optional)
-    azure_storage_connection_string: Optional[str] = Field(default=None, env="AZURE_STORAGE_CONNECTION_STRING")
-    blob_container_images: str = Field(default="canvas-images", env="BLOB_CONTAINER_IMAGES")
-    blob_container_projects: str = Field(default="canvas-projects", env="BLOB_CONTAINER_PROJECTS")
-    blob_container_exports: str = Field(default="canvas-exports", env="BLOB_CONTAINER_EXPORTS")
-    
-    # Image Processing Settings
-    max_image_size: int = Field(default=10*1024*1024, env="MAX_IMAGE_SIZE")  # 10MB
-    allowed_image_types: str = Field(
-        default="image/jpeg,image/jpg,image/png,image/webp,image/gif,image/bmp,image/tiff", 
-        env="ALLOWED_IMAGE_TYPES"
+    # Pydantic v2 config
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        case_sensitive = True,   # safer in prod
+        extra="ignore"
     )
-    max_image_width: int = Field(default=2048, env="MAX_IMAGE_WIDTH")
-    max_image_height: int = Field(default=2048, env="MAX_IMAGE_HEIGHT")
-    
-    # CORS Settings
-    cors_origins: str = Field(
-        default="http://localhost:5173,http://localhost:3000,http://localhost:4173",
-        env="CORS_ORIGINS"
+
+    # Basic
+    app_name: str = Field(default="Canvas Smith API", alias="APP_NAME")
+    app_version: str = Field(default="1.0.0", alias="APP_VERSION")
+    debug: bool = Field(default=False, alias="DEBUG")
+
+    # Server
+    host: str = Field(default="0.0.0.0", alias="HOST")
+    port: PositiveInt = Field(default=8000, alias="PORT")
+    reload: bool = Field(default=False, alias="RELOAD")  # set from env; don’t default to True
+
+    # Azure OpenAI
+    azure_openai_api_key: SecretStr = Field(alias="AZURE_OPENAI_API_KEY")
+    azure_openai_endpoint: AnyUrl = Field(alias="AZURE_OPENAI_ENDPOINT")
+    azure_openai_deployment_name: str = Field(alias="AZURE_OPENAI_DEPLOYMENT_NAME")
+    azure_openai_api_version: str = Field(default="2024-02-01", alias="AZURE_OPENAI_API_VERSION")
+
+    # AI
+    ai_timeout: PositiveInt = Field(default=120, alias="AI_TIMEOUT")
+    ai_max_retries: NonNegativeInt = Field(default=3, alias="AI_MAX_RETRIES")
+    ai_max_tokens: PositiveInt = Field(default=6000, alias="AI_MAX_TOKENS")
+
+    # Database
+    database_url: str = Field(default="sqlite:///./canvas_smith.db", alias="DATABASE_URL")
+    db_echo: bool = Field(default=False, alias="DB_ECHO")
+    db_pool_size: NonNegativeInt = Field(default=5, alias="DB_POOL_SIZE")
+    db_max_overflow: NonNegativeInt = Field(default=10, alias="DB_MAX_OVERFLOW")
+
+    # Security
+    secret_key: Optional[SecretStr] = Field(default=None, alias="SECRET_KEY")  # require in prod
+
+    # Azure Blob
+    azure_storage_connection_string: Optional[SecretStr] = Field(default=None, alias="AZURE_STORAGE_CONNECTION_STRING")
+    blob_container_images: str = Field(default="canvas-images", alias="BLOB_CONTAINER_IMAGES")
+    blob_container_projects: str = Field(default="canvas-projects", alias="BLOB_CONTAINER_PROJECTS")
+    blob_container_exports: str = Field(default="canvas-exports", alias="BLOB_CONTAINER_EXPORTS")
+
+    # Images
+    max_image_size: ByteSize = Field(default=ByteSize(10 * 1024 * 1024), alias="MAX_IMAGE_SIZE")
+    allowed_image_types: List[str] = Field(
+        default_factory=lambda: [
+            "image/jpeg","image/jpg","image/png","image/webp","image/gif","image/bmp","image/tiff"
+        ],
+        alias="ALLOWED_IMAGE_TYPES"
     )
-    
-    # Rate Limiting
-    rate_limit_requests: int = Field(default=100, env="RATE_LIMIT_REQUESTS")
-    rate_limit_window: int = Field(default=3600, env="RATE_LIMIT_WINDOW")  # 1 hour
-    
-    # Frontend Settings
-    serve_frontend: bool = Field(default=True, env="SERVE_FRONTEND")
-    static_dir: str = Field(default="static", env="STATIC_DIR")
-    
-    # Logging Settings
-    log_level: str = Field(default="INFO", env="LOG_LEVEL")
-    log_format: str = Field(
-        default="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        env="LOG_FORMAT"
+    max_image_width: PositiveInt = Field(default=2048, alias="MAX_IMAGE_WIDTH")
+    max_image_height: PositiveInt = Field(default=2048, alias="MAX_IMAGE_HEIGHT")
+
+    # CORS
+    cors_origins: List[str] = Field(
+        default_factory=lambda: ["http://localhost:5173","http://localhost:3000","http://localhost:4173"],
+        alias="CORS_ORIGINS"
     )
-    show_error_details: bool = Field(default=True, env="SHOW_ERROR_DETAILS")
-    
-    # Cache Settings (Redis optional)
-    redis_url: Optional[str] = Field(default=None, env="REDIS_URL")
-    cache_ttl: int = Field(default=3600, env="CACHE_TTL")  # 1 hour
-    
-    # Monitoring (Optional)
-    appinsights_connection_string: Optional[str] = Field(default=None, env="APPINSIGHTS_CONNECTION_STRING")
-    sentry_dsn: Optional[str] = Field(default=None, env="SENTRY_DSN")
-    
-    class Config:
-        env_file = ".env"
-        case_sensitive = False
-        
+
+    # Rate limiting
+    rate_limit_requests: PositiveInt = Field(default=100, alias="RATE_LIMIT_REQUESTS")
+    rate_limit_window: timedelta = Field(default=timedelta(hours=1), alias="RATE_LIMIT_WINDOW")
+
+    # Frontend
+    serve_frontend: bool = Field(default=False, alias="SERVE_FRONTEND")
+    static_dir: str = Field(default="static", alias="STATIC_DIR")
+
+    # Logging
+    log_level: Literal["DEBUG","INFO","WARNING","ERROR","CRITICAL"] = Field(default="INFO", alias="LOG_LEVEL")
+    log_format: str = Field(default="%(asctime)s - %(name)s - %(levelname)s - %(message)s", alias="LOG_FORMAT")
+    show_error_details: bool = Field(default=True, alias="SHOW_ERROR_DETAILS")
+
+    # Cache
+    redis_url: Optional[str] = Field(default=None, alias="REDIS_URL")
+    cache_ttl: timedelta = Field(default=timedelta(hours=1), alias="CACHE_TTL")
+
+    # Monitoring
+    appinsights_connection_string: Optional[SecretStr] = Field(default=None, alias="APPINSIGHTS_CONNECTION_STRING")
+    sentry_dsn: Optional[SecretStr] = Field(default=None, alias="SENTRY_DSN")
+
+    # Convenience
+    @property
+    def is_prod(self) -> bool:
+        return not self.debug
+
+    @property
+    def should_reload(self) -> bool:
+        # force off in prod unless explicitly enabled
+        return self.reload and not self.is_prod
+
     def get_cors_origins_list(self) -> List[str]:
-        """Convert CORS origins from string to list."""
-        return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
-    
+        """Return a copy of configured CORS origins."""
+        return list(self.cors_origins)
+
     def get_allowed_image_types_list(self) -> List[str]:
-        """Convert allowed image types from string to list."""
-        return [mime_type.strip() for mime_type in self.allowed_image_types.split(",") if mime_type.strip()]
+        """Return a copy of allowed image MIME types."""
+        return list(self.allowed_image_types)
 
-
-# Create global settings instance
 settings = Settings()

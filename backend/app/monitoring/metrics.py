@@ -3,7 +3,6 @@ Production monitoring and metrics for Canvas Smith backend.
 """
 import logging
 import threading
-import time
 from collections import defaultdict, deque
 from datetime import datetime, timedelta
 from typing import Any, Dict, Optional

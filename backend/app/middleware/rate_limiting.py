@@ -1,8 +1,7 @@
 import time
 from typing import Dict
 
-from fastapi import HTTPException, Request
-from fastapi.responses import JSONResponse
+from fastapi import  Request
 
 
 class RateLimiter:

@@ -1,10 +1,10 @@
 import logging
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from ...monitoring.metrics import metrics_collector
 from ...services.ai_service import ai_service
@@ -49,22 +49,6 @@ class CodeGenerationResponse(BaseModel):
     processing_time_ms: int
 
 
-class ChatRequest(BaseModel):
-    """Request model for chat assistance."""
-    message: str = Field(..., description="User's message or question")
-    context: Optional[Dict[str, Any]] = Field(None, description="Optional context (code, project info, etc.)")
-    conversation_id: Optional[str] = Field(None, description="Optional conversation ID for continuity")
-
-
-class ChatResponse(BaseModel):
-    """Response model for chat assistance."""
-    success: bool
-    response: str
-    conversation_id: Optional[str]
-    metadata: Dict[str, Any]
-    timestamp: str
-
-
 class HealthResponse(BaseModel):
     """Response model for AI service health check."""
     ai_service_status: str
@@ -75,7 +59,11 @@ class HealthResponse(BaseModel):
 # Endpoints
 @router.post("/generate-code", response_model=CodeGenerationResponse)
 async def generate_code_from_sketch(
-    image: UploadFile = File(..., description="Hand-drawn website sketch image (supports JPG, PNG, WebP, GIF, BMP, TIFF)")
+    image: UploadFile = File(..., description="Hand-drawn website sketch image (supports JPG, PNG, WebP, GIF, BMP, TIFF)"),
+    user_prompt: Optional[str] = Form(
+        None,
+        description="Optional instructions to guide the Vue.js component generation"
+    ),
 ):
     """
     Generate functional Vue.js code from a hand-drawn website sketch.
@@ -93,6 +81,7 @@ async def generate_code_from_sketch(
     
     **Parameters:**
     - **image**: Image file containing the website sketch (JPG, PNG, WebP, GIF, BMP, TIFF)
+    - **user_prompt** *(optional)*: Additional instructions for the generated Vue.js component
     
     **Returns:**
     Complete Vue.js component code with token usage, component analysis, and metadata.
@@ -109,7 +98,8 @@ async def generate_code_from_sketch(
         # Generate Vue.js code using AI service (no framework parameter needed)
         result = await ai_service.generate_code_from_image(
             image_data=processed_data,
-            image_format=image_format
+            image_format=image_format,
+            user_prompt=user_prompt
         )
         
         # Calculate processing time
@@ -158,7 +148,8 @@ async def generate_code_from_sketch(
                 "confidence": result.get("confidence", 0.0),
                 "has_animations": result.get("metadata", {}).get("has_animations", False),
                 "has_hover_effects": result.get("metadata", {}).get("has_hover_effects", False),
-                "generation_parameters": result.get("metadata", {}).get("generation_parameters", {})
+                "generation_parameters": result.get("metadata", {}).get("generation_parameters", {}),
+                "user_prompt": result.get("metadata", {}).get("user_prompt")
             },
             timestamp=datetime.now().isoformat(),
             processing_time_ms=int(processing_time)
@@ -191,45 +182,6 @@ async def generate_code_from_sketch(
         )
 
 
-@router.post("/chat", response_model=ChatResponse)
-async def chat_assistance(request: ChatRequest):
-    """
-    Get AI chat assistance for code modifications and questions.
-    
-    Ask questions about your generated code, request modifications, or get help with web development.
-    
-    - **message**: Your message or question
-    - **context**: Optional context like previous code or project information
-    - **conversation_id**: Optional conversation ID to maintain context across multiple messages
-    """
-    try:
-        # Process chat request using AI service
-        result = await ai_service.chat_assistance(
-            message=request.message,
-            context=request.context,
-            conversation_id=request.conversation_id
-        )
-        
-        return ChatResponse(
-            success=True,
-            response=result.get("response", ""),
-            conversation_id=result.get("conversation_id", request.conversation_id),
-            metadata={
-                "ai_model": result.get("model", "unknown"),
-                "tokens_used": result.get("tokens_used", 0),
-                "confidence": result.get("confidence", 0.0),
-                **result.get("metadata", {})
-            },
-            timestamp=datetime.now().isoformat()
-        )
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to process chat message: {str(e)}"
-        )
 
 
 @router.get("/health")
@@ -289,12 +241,12 @@ async def check_ai_configuration():
         "api_version": ai_service.api_version,
         "endpoint": ai_service.endpoint if ai_service.endpoint else None,
         "deployment_name": ai_service.deployment_name if ai_service.deployment_name else None,
-        "chat_endpoint_url": None
+        "generation_endpoint_url": None
     }
     
     try:
         if config_status["endpoint_configured"] and config_status["deployment_configured"]:
-            config_status["chat_endpoint_url"] = ai_service._get_chat_endpoint()
+            config_status["generation_endpoint_url"] = ai_service._get_chat_endpoint()
         
         all_configured = (
             config_status["api_key_configured"] and 
