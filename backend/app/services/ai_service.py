@@ -115,6 +115,36 @@ class AIService:
             detail="AI service unavailable after multiple attempts."
         )
     
+    async def _make_ai_request_streaming(self, endpoint: str, payload: Dict[str, Any]):
+        """Make an HTTP request to the AI service with streaming response support."""
+        headers = self._get_headers()
+
+        try:
+            async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=self.timeout)) as session:
+                async with session.post(endpoint, json=payload, headers=headers) as response:
+                    if response.status == 200:
+                        async for line in response.content:
+                            yield line.decode('utf-8')
+                    else:
+                        error_text = await response.text()
+                        logger.error(f"AI API error: {response.status} - {error_text}")
+                        raise HTTPException(
+                            status_code=response.status,
+                            detail=f"AI service error: {error_text}"
+                        )
+        except aiohttp.ClientError as e:
+            logger.error(f"AI API connection error: {str(e)}")
+            raise HTTPException(
+                status_code=503,
+                detail="Unable to connect to AI service. Please try again later."
+            )
+        except Exception as e:
+            logger.error(f"Unexpected error during AI request: {str(e)}")
+            raise HTTPException(
+                status_code=503,
+                detail="AI service unavailable."
+            )
+    
     async def generate_code_from_image(
         self,
         image_data: bytes,
