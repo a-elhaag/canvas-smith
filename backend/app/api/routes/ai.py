@@ -1,9 +1,10 @@
+import base64
 import logging
 from datetime import datetime
 from typing import Any, Dict, Optional
 
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
+from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
 from ...monitoring.metrics import metrics_collector
@@ -182,6 +183,173 @@ async def generate_code_from_sketch(
         )
 
 
+
+
+@router.post("/generate-code/stream", response_class=StreamingResponse)
+async def generate_code_from_sketch_streaming(
+    image: UploadFile = File(..., description="Hand-drawn website sketch image (supports JPG, PNG, WebP, GIF, BMP, TIFF)"),
+    user_prompt: Optional[str] = Form(
+        None,
+        description="Optional instructions to guide the Vue.js component generation"
+    ),
+):
+    """
+    Stream Vue.js code generation from a hand-drawn website sketch.
+    Streams NDJSON chunks with code, token usage, and progress.
+    """
+    start_time = datetime.now()
+    try:
+        image_data = await validate_image(image)
+        processed_data, image_format = await process_image_for_ai(image_data, image.content_type)
+
+        async def stream_response():
+            full_code = ""
+            token_count = 0
+            # Stream from AI service
+            async for chunk in ai_service._make_ai_request_streaming(
+                ai_service._get_chat_endpoint(),
+                {
+                    # Use the same payload logic as generate_code_from_image
+                    "messages": [
+                        {
+                            "role": "system",
+                            "content": """You are an expert Vue.js developer and UI/UX designer specializing in creating interactive, animated web components from sketches.
+
+CORE MISSION: Transform hand-drawn sketches into fully functional Vue.js components with:
+1. **Smart Component Prediction**: Analyze the sketch to predict component functionality
+2. **Interactive Elements**: Add appropriate click handlers, form submissions, navigation
+3. **Smooth Animations**: Implement Vue transitions and CSS animations
+4. **Hover Effects**: Add engaging hover states for interactive elements
+5. **Motion Design**: Use CSS transforms, transitions, and Vue animations
+
+TECHNICAL REQUIREMENTS:
+- Framework: Vue.js 3 with Composition API
+- Use <script setup> syntax with TypeScript where beneficial
+- Implement responsive design with Tailwind CSS or modern CSS
+- Add smooth transitions between states
+- Include loading states and micro-interactions
+- Predict button functionality based on visual context
+
+COMPONENT INTELLIGENCE:
+- **Buttons**: Predict actions (submit, navigate, toggle, etc.) based on placement and context
+- **Forms**: Add validation, submission handling, and success states
+- **Cards**: Include hover animations, click interactions
+- **Navigation**: Implement active states, smooth scrolling
+- **Images**: Add lazy loading, hover zoom effects
+- **Lists**: Include item animations, filtering capabilities
+
+ANIMATION GUIDELINES:
+- Use Vue <Transition> components for state changes
+- Implement CSS transforms for hover effects
+- Add spring-like animations for user interactions
+- Include entrance animations for page elements
+- Use appropriate easing functions (cubic-bezier)
+
+OUTPUT FORMAT:
+Return ONLY the complete Vue.js component code with:
+- Single File Component (.vue) structure
+- Reactive data and methods using Composition API
+- CSS with animations and transitions
+- TypeScript where appropriate
+- Comprehensive functionality prediction
+
+Do not include explanations, markdown formatting, or code blocks - just the raw Vue component code."""
+                        },
+                        {
+                            "role": "user",
+                            "content": [
+                                {"type": "text", "text": user_prompt or "Analyze this hand-drawn website sketch and create a complete, functional Vue.js component."},
+                                {
+                                    "type": "image_url",
+                                    "image_url": {
+                                        "url": f"data:image/{image_format};base64,{base64.b64encode(processed_data).decode('utf-8')}",
+                                        "detail": "high"
+                                    }
+                                }
+                            ]
+                        }
+                    ],
+                    "max_completion_tokens": ai_service.max_tokens,
+                    "top_p": 0.95,
+                    "frequency_penalty": 0.0,
+                    "presence_penalty": 0.0,
+                    "stream": True
+                }
+            ):
+                # Each chunk is a line of JSON or data: ... or [DONE]
+                if not chunk.strip():
+                    continue
+                if chunk.strip() == "[DONE]":
+                    break
+                # Remove 'data: ' prefix if present
+                if chunk.startswith("data: "):
+                    chunk = chunk[6:]
+                yield chunk.strip() + "\n"
+
+        return StreamingResponse(stream_response(), media_type="application/x-ndjson")
+
+    except HTTPException as e:
+        logger.error(f"Streaming code generation HTTP error: {e.detail}")
+        raise
+    except Exception as e:
+        logger.error(f"Streaming code generation error: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to stream Vue.js code: {str(e)}"
+        )
+
+
+@router.post("/code-chat", response_class=StreamingResponse)
+async def code_chat(
+    request: Request,
+    code: str = Form(..., description="The Vue.js component code to discuss or edit"),
+    user_message: str = Form(..., description="User's question or edit instruction about the code"),
+):
+    """
+    Chat about or edit the generated Vue.js code.
+    Streams the AI's response (answer or code edit) as NDJSON.
+    """
+    import json
+
+    async def stream_response():
+        # Prepare prompt for chat/edit
+        system_prompt = (
+            "You are an expert Vue.js developer and code assistant. "
+            "Given a Vue.js component and a user question or edit instruction, "
+            "answer the question or make the requested edit. "
+            "If editing, only output the minimal code diff or the changed section, not the full file. "
+            "If answering, provide a concise explanation."
+        )
+        user_prompt = (
+            f"Here is the Vue.js code:\n\n{code}\n\n"
+            f"User request: {user_message}\n\n"
+            "If the user asks for an edit, reply ONLY with the changed code section (not the full file), "
+            "and clearly indicate what to replace. If it's a question, answer concisely."
+        )
+
+        payload = {
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            "max_tokens": 1200,
+            "top_p": 0.95,
+            "frequency_penalty": 0.0,
+            "presence_penalty": 0.0,
+            "stream": True
+        }
+
+        endpoint = ai_service._get_chat_endpoint()
+        async for chunk in ai_service._make_ai_request_streaming(endpoint, payload):
+            if not chunk.strip():
+                continue
+            if chunk.strip() == "[DONE]":
+                break
+            if chunk.startswith("data: "):
+                chunk = chunk[6:]
+            yield chunk.strip() + "\n"
+
+    return StreamingResponse(stream_response(), media_type="application/x-ndjson")
 
 
 @router.get("/health")
