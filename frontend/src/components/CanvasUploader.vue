@@ -26,7 +26,10 @@
             class="tool-btn-modern"
             title="Stroke color"
           >
-            <div class="w-5 h-5 rounded border-2 border-gray-300" :style="{ backgroundColor: currentColor }"></div>
+            <div
+              class="w-5 h-5 rounded border-2 border-gray-300"
+              :style="{ backgroundColor: currentColor }"
+            ></div>
           </button>
           <div v-if="showColorPicker" class="color-picker-panel">
             <div class="grid grid-cols-5 gap-2 mb-2">
@@ -35,11 +38,20 @@
                 :key="color"
                 @click="selectColor(color)"
                 class="w-8 h-8 rounded border-2 hover:scale-110 transition"
-                :class="currentColor === color ? 'border-primary ring-2 ring-primary/20' : 'border-gray-300'"
+                :class="
+                  currentColor === color
+                    ? 'border-primary ring-2 ring-primary/20'
+                    : 'border-gray-300'
+                "
                 :style="{ backgroundColor: color }"
               ></button>
             </div>
-            <input type="color" v-model="currentColor" @input="showColorPicker = false" class="w-full h-8 rounded cursor-pointer" />
+            <input
+              type="color"
+              v-model="currentColor"
+              @input="showColorPicker = false"
+              class="w-full h-8 rounded cursor-pointer"
+            />
           </div>
         </div>
 
@@ -71,10 +83,20 @@
         <div class="toolbar-divider"></div>
 
         <!-- Undo/Redo -->
-        <button class="tool-btn-modern" @click="undo" title="Undo (Ctrl+Z)" :disabled="historyIndex < 0">
+        <button
+          class="tool-btn-modern"
+          @click="undo"
+          title="Undo (Ctrl+Z)"
+          :disabled="historyIndex < 0"
+        >
           <span class="text-lg">↶</span>
         </button>
-        <button class="tool-btn-modern" @click="redo" title="Redo (Ctrl+Shift+Z)" :disabled="historyIndex >= history.length - 1">
+        <button
+          class="tool-btn-modern"
+          @click="redo"
+          title="Redo (Ctrl+Shift+Z)"
+          :disabled="historyIndex >= history.length - 1"
+        >
           <span class="text-lg">↷</span>
         </button>
 
@@ -93,13 +115,16 @@
           :width="width"
           :height="height"
           class="canvas-main"
-          :class="{  'cursor-crosshair': currentTool !== 'text', 'cursor-text': currentTool === 'text' }"
+          :class="{
+            'cursor-crosshair': currentTool !== 'text',
+            'cursor-text': currentTool === 'text',
+          }"
           @mousedown="onMouseDown"
           @mousemove="onMouseMove"
           @mouseup="onMouseUp"
           @mouseleave="onMouseUp"
         ></canvas>
-        
+
         <!-- Helper Text -->
         <div v-if="!hasDrawn" class="canvas-help-text">
           <div class="text-center text-gray-400">
@@ -112,7 +137,13 @@
 
     <!-- Bottom Actions -->
     <div class="flex items-center gap-3">
-      <input type="file" accept="image/*" @change="onFileChange" class="hidden" ref="fileInputRef" />
+      <input
+        type="file"
+        accept="image/*"
+        @change="onFileChange"
+        class="hidden"
+        ref="fileInputRef"
+      />
       <button class="btn-secondary" @click="triggerFileInput">
         <span class="text-lg mr-2">📁</span>
         Upload Image
@@ -125,16 +156,16 @@
     </div>
 
     <!-- Error Display -->
-    <div v-if="error" class="error-box">
-      <strong>Error:</strong> {{ error }}
-    </div>
+    <div v-if="error" class="error-box"><strong>Error:</strong> {{ error }}</div>
 
     <!-- Processing Status -->
     <div v-if="isUploading" class="status-box">
       <div class="spinner"></div>
       <div>
         <p class="font-medium">Processing your sketch...</p>
-        <p class="text-xs text-blue-600">AI is analyzing your wireframe and generating Vue components</p>
+        <p class="text-xs text-blue-600">
+          AI is analyzing your wireframe and generating Vue components
+        </p>
       </div>
     </div>
   </div>
@@ -443,7 +474,9 @@ onMounted(() => {
   z-index: 10;
   background-color: white;
   border-radius: 0.75rem;
-  box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  box-shadow:
+    0 20px 25px -5px rgb(0 0 0 / 0.1),
+    0 8px 10px -6px rgb(0 0 0 / 0.1);
   border: 1px solid #e2e8f0;
   padding: 0.5rem;
   display: flex;
@@ -462,7 +495,9 @@ onMounted(() => {
   position: relative;
   border-radius: 0.75rem;
   overflow: hidden;
-  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  box-shadow:
+    0 10px 15px -3px rgb(0 0 0 / 0.1),
+    0 4px 6px -4px rgb(0 0 0 / 0.1);
 }
 
 .canvas-main {
@@ -471,7 +506,7 @@ onMounted(() => {
 }
 
 .grid-bg {
-  background-image: 
+  background-image:
     linear-gradient(rgba(0, 0, 0, 0.04) 1px, transparent 1px),
     linear-gradient(90deg, rgba(0, 0, 0, 0.04) 1px, transparent 1px);
   background-size: 20px 20px;
@@ -521,7 +556,9 @@ onMounted(() => {
   left: 0;
   background-color: white;
   border-radius: 0.5rem;
-  box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  box-shadow:
+    0 20px 25px -5px rgb(0 0 0 / 0.1),
+    0 8px 10px -6px rgb(0 0 0 / 0.1);
   border: 1px solid #e2e8f0;
   padding: 0.75rem;
   z-index: 20;

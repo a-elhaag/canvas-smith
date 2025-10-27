@@ -6,8 +6,18 @@
       <header class="h-14 bg-white border-b border-gray-200 flex items-center justify-between px-4">
         <div class="flex items-center gap-3">
           <div class="flex items-center gap-2">
-            <svg class="w-6 h-6 text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+            <svg
+              class="w-6 h-6 text-gray-900"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"
+              />
             </svg>
             <h1 class="text-lg font-semibold text-gray-900">Canvas Smith</h1>
           </div>
@@ -34,14 +44,24 @@
       <div class="flex-1 flex overflow-hidden relative">
         <!-- Vertical Ruler -->
         <div class="w-8 bg-gray-50 border-r border-gray-200 relative">
-          <canvas ref="verticalRuler" class="absolute inset-0" width="32" :height="rulerHeight"></canvas>
+          <canvas
+            ref="verticalRuler"
+            class="absolute inset-0"
+            width="32"
+            :height="rulerHeight"
+          ></canvas>
         </div>
 
         <!-- Canvas Container -->
         <div class="flex-1 flex flex-col">
           <!-- Horizontal Ruler -->
           <div class="h-8 bg-gray-50 border-b border-gray-200 relative">
-            <canvas ref="horizontalRuler" class="absolute inset-0" :width="rulerWidth" height="32"></canvas>
+            <canvas
+              ref="horizontalRuler"
+              class="absolute inset-0"
+              :width="rulerWidth"
+              height="32"
+            ></canvas>
           </div>
 
           <!-- Main Canvas -->
@@ -61,7 +81,10 @@
 
     <!-- Right Toolbar -->
     <Transition name="slide-left">
-      <aside v-if="showToolbar" class="w-20 bg-white border-l border-gray-200 flex flex-col items-center py-4 gap-2">
+      <aside
+        v-if="showToolbar"
+        class="w-20 bg-white border-l border-gray-200 flex flex-col items-center py-4 gap-2"
+      >
         <!-- Close Button -->
         <button
           @click="showToolbar = false"
@@ -80,9 +103,7 @@
           @click="activeTool = tool.name"
           :class="[
             'w-12 h-12 flex items-center justify-center rounded-lg transition-all',
-            activeTool === tool.name
-              ? 'bg-gray-900 text-white'
-              : 'text-gray-600 hover:bg-gray-100'
+            activeTool === tool.name ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-100',
           ]"
           :title="tool.label"
         >
@@ -98,21 +119,17 @@
             class="w-12 h-12 flex items-center justify-center rounded-lg border-2 transition-all shadow-sm"
             :style="{ borderColor: currentColor, backgroundColor: currentColor }"
             title="Color Picker"
-          >
-          </button>
-          
+          ></button>
+
           <!-- Enhanced Color Picker Popup -->
           <div
             v-if="showColorPicker"
             class="fixed right-24 bg-white rounded-xl shadow-2xl border border-gray-200 p-4 z-50"
-            style="top: 50%; transform: translateY(-50%); width: 280px;"
+            style="top: 50%; transform: translateY(-50%); width: 280px"
           >
             <div class="flex items-center justify-between mb-3">
               <h3 class="text-sm font-semibold text-gray-900">Color Picker</h3>
-              <button
-                @click="showColorPicker = false"
-                class="text-gray-400 hover:text-gray-600"
-              >
+              <button @click="showColorPicker = false" class="text-gray-400 hover:text-gray-600">
                 <component :is="CloseIcon" />
               </button>
             </div>
@@ -146,9 +163,9 @@
                   :key="color"
                   @click="selectColor(color)"
                   class="w-10 h-10 rounded-lg border-2 hover:scale-110 transition-transform"
-                  :style="{ 
-                    backgroundColor: color, 
-                    borderColor: currentColor === color ? '#000' : '#e5e7eb' 
+                  :style="{
+                    backgroundColor: color,
+                    borderColor: currentColor === color ? '#000' : '#e5e7eb',
                   }"
                   :title="color"
                 ></button>
@@ -164,9 +181,9 @@
                   :key="index"
                   @click="selectColor(color)"
                   class="w-8 h-8 rounded border-2 hover:scale-110 transition-transform"
-                  :style="{ 
-                    backgroundColor: color, 
-                    borderColor: currentColor === color ? '#000' : '#e5e7eb' 
+                  :style="{
+                    backgroundColor: color,
+                    borderColor: currentColor === color ? '#000' : '#e5e7eb',
                   }"
                 ></button>
               </div>
@@ -182,9 +199,9 @@
             @click="currentStrokeWidth = width"
             :class="[
               'rounded-full bg-gray-900 transition-all',
-              currentStrokeWidth === width ? 'ring-2 ring-gray-400 ring-offset-2' : ''
+              currentStrokeWidth === width ? 'ring-2 ring-gray-400 ring-offset-2' : '',
             ]"
-            :style="{ width: (width * 3 + 8) + 'px', height: (width * 3 + 8) + 'px' }"
+            :style="{ width: width * 3 + 8 + 'px', height: width * 3 + 8 + 'px' }"
             :title="`${width}px`"
           ></button>
         </div>
@@ -214,7 +231,7 @@
               'flex-1 px-4 py-3 text-sm font-medium transition-all',
               activeTab === 'code'
                 ? 'text-gray-900 border-b-2 border-gray-900'
-                : 'text-gray-600 hover:text-gray-900'
+                : 'text-gray-600 hover:text-gray-900',
             ]"
           >
             <component :is="CodeIcon" class="inline mr-2" />
@@ -226,7 +243,7 @@
               'flex-1 px-4 py-3 text-sm font-medium transition-all',
               activeTab === 'preview'
                 ? 'text-gray-900 border-b-2 border-gray-900'
-                : 'text-gray-600 hover:text-gray-900'
+                : 'text-gray-600 hover:text-gray-900',
             ]"
           >
             <component :is="PreviewIcon" class="inline mr-2" />
@@ -298,37 +315,66 @@ import CodeViewer from './components/CodeViewer.vue'
 
 // Icon components
 const createIcon = (path: string) => {
-  return () => h('svg', {
-    fill: 'none',
-    stroke: 'currentColor',
-    viewBox: '0 0 24 24',
-    class: 'w-5 h-5'
-  }, [
+  return () =>
+    h(
+      'svg',
+      {
+        fill: 'none',
+        stroke: 'currentColor',
+        viewBox: '0 0 24 24',
+        class: 'w-5 h-5',
+      },
+      [
+        h('path', {
+          'stroke-linecap': 'round',
+          'stroke-linejoin': 'round',
+          'stroke-width': '2',
+          d: path,
+        }),
+      ],
+    )
+}
+
+const PenIcon = createIcon(
+  'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z',
+)
+const RectangleIcon = createIcon(
+  'M4 5a1 1 0 011-1h14a1 1 0 011 1v14a1 1 0 01-1 1H5a1 1 0 01-1-1V5z',
+)
+const CircleIcon = () =>
+  h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24', class: 'w-5 h-5' }, [
+    h('circle', { cx: '12', cy: '12', r: '9', 'stroke-width': '2' }),
+  ])
+const LineIcon = createIcon('M5 19L19 5')
+const TextIcon = createIcon(
+  'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
+)
+const EraserIcon = createIcon(
+  'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16',
+)
+const SelectIcon = createIcon(
+  'M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122',
+)
+const DownloadIcon = createIcon('M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4')
+const CodeIcon = createIcon('M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4')
+const PreviewIcon = () =>
+  h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24', class: 'w-4 h-4' }, [
     h('path', {
       'stroke-linecap': 'round',
       'stroke-linejoin': 'round',
       'stroke-width': '2',
-      d: path
-    })
+      d: 'M15 12a3 3 0 11-6 0 3 3 0 016 0z',
+    }),
+    h('path', {
+      'stroke-linecap': 'round',
+      'stroke-linejoin': 'round',
+      'stroke-width': '2',
+      d: 'M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z',
+    }),
   ])
-}
-
-const PenIcon = createIcon('M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z')
-const RectangleIcon = createIcon('M4 5a1 1 0 011-1h14a1 1 0 011 1v14a1 1 0 01-1 1H5a1 1 0 01-1-1V5z')
-const CircleIcon = () => h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24', class: 'w-5 h-5' }, [
-  h('circle', { cx: '12', cy: '12', r: '9', 'stroke-width': '2' })
-])
-const LineIcon = createIcon('M5 19L19 5')
-const TextIcon = createIcon('M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z')
-const EraserIcon = createIcon('M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16')
-const SelectIcon = createIcon('M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122')
-const DownloadIcon = createIcon('M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4')
-const CodeIcon = createIcon('M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4')
-const PreviewIcon = () => h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24', class: 'w-4 h-4' }, [
-  h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M15 12a3 3 0 11-6 0 3 3 0 016 0z' }),
-  h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z' })
-])
-const SparklesIcon = createIcon('M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z')
+const SparklesIcon = createIcon(
+  'M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z',
+)
 const CloseIcon = createIcon('M6 18L18 6M6 6l12 12')
 
 // State
@@ -362,9 +408,18 @@ const currentStrokeWidth = ref(2)
 const recentColors = ref<string[]>([])
 
 const presetColors = [
-  '#000000', '#ffffff', '#ef4444', '#f59e0b',
-  '#22c55e', '#3b82f6', '#a855f7', '#ec4899',
-  '#64748b', '#f97316', '#14b8a6', '#8b5cf6'
+  '#000000',
+  '#ffffff',
+  '#ef4444',
+  '#f59e0b',
+  '#22c55e',
+  '#3b82f6',
+  '#a855f7',
+  '#ec4899',
+  '#64748b',
+  '#f97316',
+  '#14b8a6',
+  '#8b5cf6',
 ]
 
 const strokeWidths = [1, 2, 4, 8]
@@ -377,7 +432,7 @@ const drawingTools = [
   { name: 'line', label: 'Line (L)', icon: LineIcon },
   { name: 'text', label: 'Text (T)', icon: TextIcon },
   { name: 'eraser', label: 'Eraser (E)', icon: EraserIcon },
-  { name: 'select', label: 'Select/Pan (V)', icon: SelectIcon }
+  { name: 'select', label: 'Select/Pan (V)', icon: SelectIcon },
 ]
 
 // Initialize canvas
@@ -387,7 +442,7 @@ onMounted(() => {
   const container = canvasContainer.value
   canvas.value.width = container.clientWidth
   canvas.value.height = container.clientHeight
-  
+
   rulerWidth.value = container.clientWidth
   rulerHeight.value = container.clientHeight
 
@@ -401,7 +456,7 @@ onMounted(() => {
   }
 
   drawRulers()
-  
+
   window.addEventListener('keydown', handleKeyboard)
   window.addEventListener('resize', handleResize)
 })
@@ -424,7 +479,7 @@ function ensureQualitySettings(ctx: CanvasRenderingContext2D) {
 function saveState() {
   const ctx = getContext()
   if (!ctx || !canvas.value) return
-  
+
   const imageData = ctx.getImageData(0, 0, canvas.value.width, canvas.value.height)
   historyIndex.value++
   drawingHistory.value = drawingHistory.value.slice(0, historyIndex.value)
@@ -434,7 +489,7 @@ function saveState() {
 function restoreState(index: number) {
   const ctx = getContext()
   if (!ctx || !canvas.value || index < 0 || index >= drawingHistory.value.length) return
-  
+
   ctx.putImageData(drawingHistory.value[index], 0, 0)
   historyIndex.value = index
 }
@@ -446,11 +501,11 @@ function drawRulers() {
     hCtx.clearRect(0, 0, horizontalRuler.value.width, horizontalRuler.value.height)
     hCtx.fillStyle = '#f9fafb'
     hCtx.fillRect(0, 0, horizontalRuler.value.width, horizontalRuler.value.height)
-    
+
     hCtx.strokeStyle = '#d1d5db'
     hCtx.fillStyle = '#6b7280'
     hCtx.font = '10px sans-serif'
-    
+
     const step = 50
     for (let i = 0; i < horizontalRuler.value.width; i += step) {
       hCtx.beginPath()
@@ -469,11 +524,11 @@ function drawRulers() {
     vCtx.clearRect(0, 0, verticalRuler.value.width, verticalRuler.value.height)
     vCtx.fillStyle = '#f9fafb'
     vCtx.fillRect(0, 0, verticalRuler.value.width, verticalRuler.value.height)
-    
+
     vCtx.strokeStyle = '#d1d5db'
     vCtx.fillStyle = '#6b7280'
     vCtx.font = '10px sans-serif'
-    
+
     const step = 50
     for (let i = 0; i < verticalRuler.value.height; i += step) {
       vCtx.beginPath()
@@ -494,7 +549,7 @@ function drawRulers() {
 function redraw() {
   const ctx = getContext()
   if (!ctx || !canvas.value) return
-  
+
   // Restore the current drawing state without transformations
   if (historyIndex.value >= 0) {
     ctx.putImageData(drawingHistory.value[historyIndex.value], 0, 0)
@@ -502,7 +557,7 @@ function redraw() {
     ctx.fillStyle = '#ffffff'
     ctx.fillRect(0, 0, canvas.value.width, canvas.value.height)
   }
-  
+
   // Update rulers
   drawRulers()
 }
@@ -511,7 +566,7 @@ function redraw() {
 function screenToCanvas(screenX: number, screenY: number) {
   return {
     x: screenX,
-    y: screenY
+    y: screenY,
   }
 }
 
@@ -519,15 +574,15 @@ function screenToCanvas(screenX: number, screenY: number) {
 function onMouseDown(e: MouseEvent) {
   const rect = canvas.value?.getBoundingClientRect()
   if (!rect) return
-  
+
   const x = e.clientX - rect.left
   const y = e.clientY - rect.top
-  
+
   isDrawing.value = true
   startPos.value = { x, y }
   lastPos.value = { x, y }
   currentPath.value = [{ x, y }]
-  
+
   // Start drawing for pen immediately with proper styles
   if (activeTool.value === 'pen') {
     const ctx = getContext()
@@ -541,7 +596,7 @@ function onMouseDown(e: MouseEvent) {
       ctx.moveTo(x, y)
     }
   }
-  
+
   // For eraser, also set up the context
   if (activeTool.value === 'eraser') {
     const ctx = getContext()
@@ -560,7 +615,7 @@ function onMouseDown(e: MouseEvent) {
 function onMouseMove(e: MouseEvent) {
   const rect = canvas.value?.getBoundingClientRect()
   if (!rect) return
-  
+
   const x = e.clientX - rect.left
   const y = e.clientY - rect.top
 
@@ -588,23 +643,27 @@ function onMouseMove(e: MouseEvent) {
         ctx.stroke()
       }
       currentPath.value.push({ x, y })
-    } else if (activeTool.value === 'rectangle' || activeTool.value === 'circle' || activeTool.value === 'line') {
+    } else if (
+      activeTool.value === 'rectangle' ||
+      activeTool.value === 'circle' ||
+      activeTool.value === 'line'
+    ) {
       // Clear and redraw from last saved state for preview
       if (historyIndex.value >= 0) {
         ctx.putImageData(drawingHistory.value[historyIndex.value], 0, 0)
       }
-      
+
       ensureQualitySettings(ctx)
       ctx.strokeStyle = currentColor.value
       ctx.lineWidth = currentStrokeWidth.value
-      
+
       if (activeTool.value === 'rectangle') {
         const width = x - startPos.value.x
         const height = y - startPos.value.y
         ctx.strokeRect(startPos.value.x, startPos.value.y, width, height)
       } else if (activeTool.value === 'circle') {
         const radius = Math.sqrt(
-          Math.pow(x - startPos.value.x, 2) + Math.pow(y - startPos.value.y, 2)
+          Math.pow(x - startPos.value.x, 2) + Math.pow(y - startPos.value.y, 2),
         )
         ctx.beginPath()
         ctx.arc(startPos.value.x, startPos.value.y, radius, 0, 2 * Math.PI)
@@ -625,7 +684,7 @@ function onMouseUp(e: MouseEvent) {
   if (isDrawing.value) {
     const rect = canvas.value?.getBoundingClientRect()
     if (!rect) return
-    
+
     const x = e.clientX - rect.left
     const y = e.clientY - rect.top
     const ctx = getContext()
@@ -645,7 +704,7 @@ function onMouseUp(e: MouseEvent) {
       ctx.strokeRect(startPos.value.x, startPos.value.y, width, height)
     } else if (activeTool.value === 'circle') {
       const radius = Math.sqrt(
-        Math.pow(x - startPos.value.x, 2) + Math.pow(y - startPos.value.y, 2)
+        Math.pow(x - startPos.value.x, 2) + Math.pow(y - startPos.value.y, 2),
       )
       ctx.beginPath()
       ctx.arc(startPos.value.x, startPos.value.y, radius, 0, 2 * Math.PI)
@@ -679,7 +738,7 @@ function selectColor(color: string) {
   currentColor.value = color
   hexColor.value = color
   showColorPicker.value = false
-  
+
   // Add to recent colors if not already there
   if (!recentColors.value.includes(color)) {
     recentColors.value.unshift(color)
@@ -704,10 +763,10 @@ function updateHexFromColor() {
 function clearCanvas() {
   const ctx = getContext()
   if (!ctx || !canvas.value) return
-  
+
   ctx.fillStyle = '#ffffff'
   ctx.fillRect(0, 0, canvas.value.width, canvas.value.height)
-  
+
   saveState()
 }
 
@@ -722,22 +781,22 @@ function exportCanvas() {
 
 async function generateCode() {
   if (!canvas.value) return
-  
+
   isGenerating.value = true
   activeTab.value = 'code'
-  
+
   try {
     canvas.value.toBlob(async (blob) => {
       if (!blob) return
-      
+
       const formData = new FormData()
       formData.append('image', blob, 'sketch.png')
-      
+
       const response = await fetch('http://localhost:8000/api/ai/generate-code', {
         method: 'POST',
-        body: formData
+        body: formData,
       })
-      
+
       const data = await response.json()
       generatedCode.value = data
       isGenerating.value = false
@@ -751,23 +810,23 @@ async function generateCode() {
 function handleKeyboard(e: KeyboardEvent) {
   // Prevent default for tool shortcuts
   const keyMap: Record<string, string> = {
-    'p': 'pen',
-    'r': 'rectangle',
-    'c': 'circle',
-    'l': 'line',
-    't': 'text',
-    'e': 'eraser',
-    'v': 'select'
+    p: 'pen',
+    r: 'rectangle',
+    c: 'circle',
+    l: 'line',
+    t: 'text',
+    e: 'eraser',
+    v: 'select',
   }
-  
+
   const key = e.key.toLowerCase()
-  
+
   if (keyMap[key]) {
     e.preventDefault()
     activeTool.value = keyMap[key]
     console.log('Tool changed to:', activeTool.value)
   }
-  
+
   if (key === ' ') {
     e.preventDefault()
     activeTool.value = 'select'
@@ -776,13 +835,13 @@ function handleKeyboard(e: KeyboardEvent) {
 
 function handleResize() {
   if (!canvas.value || !canvasContainer.value) return
-  
+
   const oldWidth = canvas.value.width
   const oldHeight = canvas.value.height
-  
+
   const newWidth = canvasContainer.value.clientWidth
   const newHeight = canvasContainer.value.clientHeight
-  
+
   // Save current canvas content
   const tempCanvas = document.createElement('canvas')
   tempCanvas.width = oldWidth
@@ -791,13 +850,13 @@ function handleResize() {
   if (tempCtx) {
     tempCtx.drawImage(canvas.value, 0, 0)
   }
-  
+
   // Resize canvas
   canvas.value.width = newWidth
   canvas.value.height = newHeight
   rulerWidth.value = newWidth
   rulerHeight.value = newHeight
-  
+
   // Restore content
   const ctx = getContext()
   if (ctx && tempCtx) {
@@ -805,7 +864,7 @@ function handleResize() {
     ctx.fillRect(0, 0, newWidth, newHeight)
     ctx.drawImage(tempCanvas, 0, 0)
   }
-  
+
   redraw()
 }
 </script>
@@ -841,4 +900,3 @@ function handleResize() {
   opacity: 0;
 }
 </style>
-
