@@ -1,4 +1,5 @@
 <script setup lang="ts">
+defineOptions({ name: 'AppButton' })
 import { ref, computed } from 'vue'
 
 // Props interface
