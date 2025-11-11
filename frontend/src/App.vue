@@ -1,5 +1,7 @@
 <template>
   <div class="h-screen w-screen bg-gray-50 overflow-hidden flex">
+    <!-- Toast Notifications -->
+    <ToastContainer />
     <!-- Main Canvas Area -->
     <main class="flex-1 flex flex-col">
       <!-- Top Bar -->
@@ -312,7 +314,12 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, h } from 'vue'
 import CodeViewer from './components/CodeViewer.vue'
+import LoadingSpinner from './components/LoadingSpinner.vue'
+import ToastContainer from './components/ToastContainer.vue'
 import { api, CanvasSmithAPI } from './services/api'
+import { useToast } from './composables/useToast'
+
+const toast = useToast()
 
 // Icon components
 const createIcon = (path: string) => {
@@ -769,23 +776,38 @@ function clearCanvas() {
   ctx.fillRect(0, 0, canvas.value.width, canvas.value.height)
 
   saveState()
+  toast.info('Canvas cleared')
 }
 
 function exportCanvas() {
-  if (canvas.value) {
+  if (!canvas.value) {
+    toast.warning('Nothing to export')
+    return
+  }
+  
+  try {
     const link = document.createElement('a')
-    link.download = 'canvas-sketch.png'
+    const timestamp = new Date().toISOString().split('T')[0]
+    link.download = `canvas-sketch-${timestamp}.png`
     link.href = canvas.value.toDataURL()
     link.click()
+    toast.success('Canvas exported successfully!')
+  } catch (error) {
+    console.error('Export failed:', error)
+    toast.error('Failed to export canvas')
   }
 }
 
 async function generateCode() {
-  if (!canvas.value) return
+  if (!canvas.value) {
+    toast.warning('Please draw something on the canvas first')
+    return
+  }
 
   isGenerating.value = true
   activeTab.value = 'code'
   showRightPanel.value = true
+  toast.info('Processing your sketch...')
 
   try {
     // Convert canvas to file using API helper
@@ -795,10 +817,12 @@ async function generateCode() {
     const result = await api.generateCode(imageFile)
     
     generatedCode.value = result
+    toast.success('Code generated successfully!')
     console.log('Code generated successfully:', result.component_analysis)
   } catch (error) {
     console.error('Generation failed:', error)
-    alert(`Failed to generate code: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    toast.error(`Failed to generate code: ${errorMessage}`)
   } finally {
     isGenerating.value = false
   }
