@@ -312,6 +312,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, h } from 'vue'
 import CodeViewer from './components/CodeViewer.vue'
+import { api, CanvasSmithAPI } from './services/api'
 
 // Icon components
 const createIcon = (path: string) => {
@@ -784,25 +785,21 @@ async function generateCode() {
 
   isGenerating.value = true
   activeTab.value = 'code'
+  showRightPanel.value = true
 
   try {
-    canvas.value.toBlob(async (blob) => {
-      if (!blob) return
-
-      const formData = new FormData()
-      formData.append('image', blob, 'sketch.png')
-
-      const response = await fetch('http://localhost:8000/api/ai/generate-code', {
-        method: 'POST',
-        body: formData,
-      })
-
-      const data = await response.json()
-      generatedCode.value = data
-      isGenerating.value = false
-    })
+    // Convert canvas to file using API helper
+    const imageFile = await CanvasSmithAPI.canvasToFile(canvas.value, 'sketch.png')
+    
+    // Call the API to generate code
+    const result = await api.generateCode(imageFile)
+    
+    generatedCode.value = result
+    console.log('Code generated successfully:', result.component_analysis)
   } catch (error) {
     console.error('Generation failed:', error)
+    alert(`Failed to generate code: ${error instanceof Error ? error.message : 'Unknown error'}`)
+  } finally {
     isGenerating.value = false
   }
 }
