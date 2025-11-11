@@ -37,7 +37,7 @@ WORKDIR /app
 COPY backend/ ./
 
 # Move built frontend to static directory
-RUN cp -r frontend/dist/* ./static/ 2>/dev/null || mkdir -p ./static
+RUN mkdir -p ./static && cp -r frontend/dist/* ./static/ || true
 
 # Create non-root user for security
 RUN adduser --disabled-password --gecos '' --uid 1000 appuser
